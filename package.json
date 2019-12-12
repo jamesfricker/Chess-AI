@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/TehBigFr0g/Chess-AI/issues"
   },
-  "homepage": "https://github.com/TehBigFr0g/Chess-AI#readme"
+  "homepage": "https://github.com/TehBigFr0g/Chess-AI#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
 }
