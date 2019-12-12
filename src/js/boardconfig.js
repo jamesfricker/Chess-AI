@@ -1,7 +1,19 @@
 var board,
     game = new Chess();
 
-
+// counts number of pieces of a colour
+var piecesRemaining = function(colour) {
+  var num = 0;
+  board.forEach(function(row) {
+    row.forEach(function(piece) {
+      if (piece['color']==colour) {
+        // Subtract piece value if it is opponent's piece
+        num += 1;
+      }
+    });
+  });
+  return num;
+}
 
 // Actions after any move
 var onMoveEnd = function(oldPos, newPos) {
@@ -19,6 +31,9 @@ var onMoveEnd = function(oldPos, newPos) {
     alert('Game Over');
     console.log('Game Over');
     }
+  if(piecesRemaining("b") < 4  || piecesRemaining("w") < 4){
+    playGame(9,10);
+  }
   }
 
   // Log the current game position
@@ -32,27 +47,11 @@ var onDragStart = function(source, piece, position, orientation) {
   }
 };
 
-// counts number of pieces of a colour
-var piecesRemaining = function(colour) {
-  var num = 0;
-  board.forEach(function(row) {
-    row.forEach(function(piece) {
-      if (piece['color']==colour) {
-        // Subtract piece value if it is opponent's piece
-        num += 1;
-      }
-    });
-  });
-  return num;
-}
 
 // Update the board position after the piece snap
 // for castling, en passant, pawn promotion
 var onSnapEnd = function() {
   board.position(game.fen());
-  if(piecesRemaining("b") < 5  || piecesRemaining("w") < 5){
-    playGame(10,10);
-  }
 };
 
 // Configure board
