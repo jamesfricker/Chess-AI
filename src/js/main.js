@@ -47,6 +47,6 @@ var onDrop = function(source, target) {
 
   // make move for black
   window.setTimeout(function() {
-    playGame(3,3);
+    playGame(3,4);
   }, 250);
 };
