@@ -50,7 +50,7 @@ var piecesRemaining = function(colour) {
 // for castling, en passant, pawn promotion
 var onSnapEnd = function() {
   board.position(game.fen());
-  if(piecesRemaining("b") == 1 || piecesRemaining("w")==1){
+  if(piecesRemaining("b") < 5  || piecesRemaining("w") < 5){
     playGame(10,10);
   }
 };
