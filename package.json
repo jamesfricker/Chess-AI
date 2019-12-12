@@ -1,0 +1,20 @@
+  
+{
+  "name": "chess-ai",
+  "version": "1.0",
+  "description": "A simple chess simulation",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "git+https://github.com/TehBigFr0g/Chess-AI.git",
+  "author": "byanofsky <byanofsky@me.com>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/TehBigFr0g/Chess-AI/issues"
+  },
+  "homepage": "https://github.com/TehBigFr0g/Chess-AI#readme",
+  "dependencies": {
+    "express": "^4.15.3"
+  }
+}
