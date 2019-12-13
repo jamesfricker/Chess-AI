@@ -64,7 +64,7 @@ var playGame = function() {
   // timeout so animation can finish
   window.setTimeout(function() {
     playGame();
-  }, 150);
+  }, 200);
 };
 
 // Handles what to do after human makes move.
