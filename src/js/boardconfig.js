@@ -7,7 +7,6 @@ var piecesRemaining = function(colour) {
   board.forEach(function(row) {
     row.forEach(function(piece) {
       if (piece['color']==colour) {
-        // Subtract piece value if it is opponent's piece
         num += 1;
       }
     });
@@ -27,10 +26,19 @@ var onMoveEnd = function(oldPos, newPos) {
       alert('Draw');
       console.log('Draw');
     }
+    else if(game.in_stalemate() == true){
+      alert('Stalemate');
+      console.log('Stalemate');
+    }
+    else if(game.in_threefold_repetition() == true){
+      alert('Threefold Repetition');
+      console.log('Threefold Repetition');
+    }
     else{
     alert('Game Over');
     console.log('Game Over');
     }
+    // increase ability when not many pieces left
   if(piecesRemaining("b") < 4  || piecesRemaining("w") < 4){
     playGame(9,10);
     }
@@ -65,4 +73,4 @@ var cfg = {
   onSnapEnd: onSnapEnd
 }
 board = ChessBoard('board', cfg);
-playGame(3,4)
+playGame()

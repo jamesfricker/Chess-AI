@@ -16,16 +16,19 @@ var makeMove = function(skill=3) {
 }
 
 // Computer vs Computer
-var playGame = function(skillW=2, skillB=2) {
+var playGame = function() {
   if (game.game_over() === true) {
     console.log('game over');
     return;
   }
+  skillW = 3;
+  skillB = 4;
   var skill = game.turn() === 'w' ? skillW : skillB;
   makeMove(skill);
 
+  // timeout so animation can finish
   window.setTimeout(function() {
-    playGame(skillW, skillB);
+    playGame();
   }, 250);
 };
 
@@ -38,15 +41,4 @@ var onDrop = function(source, target) {
     to: target,
     promotion: 'q' // NOTE: always promote to a queen for example simplicity
   });
-
-  // If illegal move, snapback
-  if (move === null) return 'snapback';
-
-  // Log the move
-  console.log(move)
-
-  // make move for black
-  window.setTimeout(function() {
-    playGame(3,4);
-  }, 250);
 };
