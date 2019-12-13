@@ -33,7 +33,7 @@ var onMoveEnd = function(oldPos, newPos) {
     }
   if(piecesRemaining("b") < 4  || piecesRemaining("w") < 4){
     playGame(9,10);
-  }
+    }
   }
 
   // Log the current game position
@@ -65,4 +65,4 @@ var cfg = {
   onSnapEnd: onSnapEnd
 }
 board = ChessBoard('board', cfg);
-playGame(3,3)
+playGame(3,4)

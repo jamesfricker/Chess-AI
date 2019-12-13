@@ -14,7 +14,6 @@ var evaluateBoard = function(board, color) {
     'q': 1000,
     'k': 10000
   };
-
   // Loop through all pieces on the board and sum up total
   var value = 0;
   board.forEach(function(row) {
@@ -26,7 +25,6 @@ var evaluateBoard = function(board, color) {
       }
     });
   });
-
   return value;
 };
 
@@ -50,7 +48,9 @@ var calcBestMove = function(depth, game, playerColor,
     value = evaluateBoard(game.board(), playerColor);
     return [value, null]
   }
-
+  if(game.in_checkmate() == true){
+    value = -10000000
+  }
   // Recursive case: search possible moves
   var bestMove = null; // best move not set yet
   var possibleMoves = game.moves();
