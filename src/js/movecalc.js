@@ -55,8 +55,29 @@ var calcBestMove = function(depth, game, playerColor,
   var bestMove = null; // best move not set yet
   var possibleMoves = game.moves();
   // Set random order for possible moves
-  possibleMoves.sort(function(a, b){return 0.5 - Math.random()});
+  if(totalMoves<10){
+    possibleMoves.sort(function(a, b){return 0.5 - Math.random()});
+  }
+  else{
+    possibleMoves.sort(function(a, b)
+      {
+        game.move(a);
+        v1 = evaluateBoard();
+        game.undo();
 
+        game.move(b);
+        v2 = evaluateBoard();
+        game.undo();
+
+        if (v1 > v2) {
+          return -1;
+        }
+        if (v2 > v1) {
+            return 1;
+        }
+        return 0;
+      });
+  }
   // Set a default best move value
   var bestMoveValue = isMaximizingPlayer ? Number.NEGATIVE_INFINITY
                                          : Number.POSITIVE_INFINITY;

@@ -1,19 +1,17 @@
 var board,
     game = new Chess();
 
-// counts number of pieces of a colour
-var piecesRemaining = function(colour) {
-  var num = 0;
-  board.forEach(function(row) {
-    row.forEach(function(piece) {
-      if (piece['color']==colour) {
-        num += 1;
-      }
-    });
-  });
-  return num;
-}
+isComputer = false;
+totalMoves = 0;
 
+var resetGame = function()
+{
+    game.reset();
+    board = ChessBoard('board', cfg);
+    isComputer = false;
+    alert("Reset the Game")
+    totalMoves = 0;
+}
 // Actions after any move
 var onMoveEnd = function(oldPos, newPos) {
   // Alert if game is over
@@ -38,10 +36,7 @@ var onMoveEnd = function(oldPos, newPos) {
     alert('Game Over');
     console.log('Game Over');
     }
-    // increase ability when not many pieces left
-  if(piecesRemaining("b") < 4  || piecesRemaining("w") < 4){
-    playGame(9,10);
-    }
+    totalMoves+=1;
   }
 
   // Log the current game position
@@ -66,11 +61,20 @@ var onSnapEnd = function() {
 var cfg = {
   draggable: true,
   position: 'start',
+  moveSpeed: 50,
+  snapSpeed: 20,
+  trashSpeed: 50,
+  appearSpeed: 50,
   // Handlers for user actions
   onMoveEnd: onMoveEnd,
   onDragStart: onDragStart,
   onDrop: onDrop,
   onSnapEnd: onSnapEnd
 }
+
+var undoMove = function()
+{
+  game.undo();
+  board.position(game.fen());
+}
 board = ChessBoard('board', cfg);
-playGame()

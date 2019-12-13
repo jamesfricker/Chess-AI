@@ -7,9 +7,12 @@
   </head>
   <body>
     <div id="board" style="width: 400px"></div>
-    <p>Black can see 4 moves ahead, while White can only see 3 moves ahead.</p>
+    <p>You are playing as WHITE against the computer.</p>
     <p>Created by James Fricker</p>
   </body>
+  <input type=button onClick="resetGame()" value="Reset the Game">
+  <input type=button onClick="computerPlay()" value="Get Computer to Play">
+  <input type=button onClick="undoMove()" value="Undo">
   <script src="./js/jquery-3.2.1.min.js"></script>
   <script src="./js/chess.min.js"></script>
   <script src="./js/chessboard-0.3.0.min.js"></script>
