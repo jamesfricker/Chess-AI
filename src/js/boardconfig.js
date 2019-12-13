@@ -62,9 +62,7 @@ var cfg = {
   draggable: true,
   position: 'start',
   moveSpeed: 50,
-  snapSpeed: 20,
-  trashSpeed: 50,
-  appearSpeed: 50,
+
   // Handlers for user actions
   onMoveEnd: onMoveEnd,
   onDragStart: onDragStart,

@@ -64,7 +64,7 @@ var playGame = function() {
   // timeout so animation can finish
   window.setTimeout(function() {
     playGame();
-  }, 200);
+  }, 250);
 };
 
 // Handles what to do after human makes move.
@@ -76,7 +76,13 @@ var onDrop = function(source, target) {
     to: target,
     promotion: 'q' // NOTE: always promote to a queen for example simplicity
   });
+  // If illegal move, snapback
+  if (move === null) return 'snapback';
+
+  // Log the move
+  console.log(move)
+  
   window.setTimeout(function() {
   makeMove();
-  }, 200);
+  }, 250);
 };
