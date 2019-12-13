@@ -13,7 +13,7 @@ var piecesRemaining = function(board,colour) {
 
 
 // Computer makes a move with algorithm choice and skill/depth level
-var makeMove = function(skill=4) {
+var makeMove = function(skill=3) {
   // exit if the game is over
   if (game.game_over() === true) {
     console.log('game over');
@@ -81,7 +81,7 @@ var onDrop = function(source, target) {
 
   // Log the move
   console.log(move)
-  
+
   window.setTimeout(function() {
   makeMove();
   }, 250);
