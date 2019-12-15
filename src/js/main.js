@@ -13,19 +13,14 @@ var piecesRemaining = function(board,colour) {
 
 
 // Computer makes a move with algorithm choice and skill/depth level
-var makeMove = function(skill=3) {
+var makeMove = function(skill=4) {
   // exit if the game is over
   if (game.game_over() === true) {
     console.log('game over');
     return;
   }
-  // Calculate the best move, using chosen algorithm
-  if(piecesRemaining(game.board(),'w')<4)
-  {
-    skill = 5;
-  }
-  var move = calcBestMove(skill, game, game.turn())[1];
-  
+  //var move = calcBestMove(skill, game, game.turn())[1];
+  var move = interativeDeepening(game,skill);
   // Make the calculated move
   game.move(move);
   // Update board positions
@@ -48,16 +43,9 @@ var playGame = function() {
     console.log('game over');
     return;
   }
-  skillW = 3;
-  skillB = 3;
-  if(piecesRemaining(game.board(),"w")<5)
-  {
-    skillB = 5;
-  }
-  if(piecesRemaining(game.board(),"b")<5)
-  {
-    skillW = 5;
-  }
+  skillW = 4;
+  skillB = 4;
+
   var skill = game.turn() === 'w' ? skillW : skillB;
   makeMove(skill);
 

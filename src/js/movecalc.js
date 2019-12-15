@@ -43,6 +43,13 @@ var calcBestMove = function(depth, game, playerColor,
                             alpha=Number.NEGATIVE_INFINITY,
                             beta=Number.POSITIVE_INFINITY,
                             isMaximizingPlayer=true) {
+  for(var i = 0; i<table.length; i++)
+  {
+    if(table[i][0] == game.fen())
+    {
+      return table[i];
+    }
+  }
   // Base case: evaluate board
   if (depth === 0) {
     value = evaluateBoard(game.board(), playerColor);
@@ -119,5 +126,18 @@ var calcBestMove = function(depth, game, playerColor,
   // Log the best move at the current depth
   console.log('Depth: ' + depth + ' | Best Move: ' + bestMove + ' | ' + bestMoveValue + ' | A: ' + alpha + ' | B: ' + beta);
   // Return the best move, or the only move
+  table[game.fen()] = [bestMoveValue,bestMove];
   return [bestMoveValue, bestMove || possibleMoves[0]];
 }
+
+// not working properly
+var interativeDeepening = function(game,skill)
+{
+  for(var distance = 1; distance < skill; distance++) {
+    console.log("Checking at Distance ="+distance);
+    var bestmove = calcBestMove(distance,game,game.turn())[1];
+    }
+  var table = {}
+  return bestmove;  
+}
+
