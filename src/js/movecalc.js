@@ -133,7 +133,7 @@ var calcBestMove = function(depth, game, playerColor,
 // not working properly
 var interativeDeepening = function(game,skill)
 {
-  for(var distance = 1; distance < skill; distance++) {
+  for(var distance = 1; distance <= skill; distance++) {
     console.log("Checking at Distance ="+distance);
     var bestmove = calcBestMove(distance,game,game.turn())[1];
     }
