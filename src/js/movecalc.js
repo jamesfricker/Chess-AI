@@ -137,7 +137,7 @@ var interativeDeepening = function(game,skill)
     console.log("Checking at Distance ="+distance);
     var bestmove = calcBestMove(distance,game,game.turn())[1];
     }
-  var table = {}
+    table = {}
   return bestmove;  
 }
 
