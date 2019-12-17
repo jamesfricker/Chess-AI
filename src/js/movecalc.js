@@ -43,21 +43,19 @@ var calcBestMove = function(depth, game, playerColor,
                             alpha=Number.NEGATIVE_INFINITY,
                             beta=Number.POSITIVE_INFINITY,
                             isMaximizingPlayer=true) {
-  for(var i = 0; i<table.length; i++)
-  {
-    if(table[i][0] == game.fen())
-    {
-      return table[i];
-    }
-  }
   // Base case: evaluate board
   if (depth === 0) {
     value = evaluateBoard(game.board(), playerColor);
-    return [value, null]
+    return [value, null];
   }
-  if(game.in_checkmate() == true){
-    value = -10000000
-  }
+   for (var key in table){
+      //console.log(game.fen(),key)
+      if(game.fen()== key)
+      {
+        console.log("Looked at this Game before!")
+        return [evaluateBoard(game.board(),playerColor),table[game.fen()]];
+      }
+    }
   // Recursive case: search possible moves
   var bestMove = null; // best move not set yet
   var possibleMoves = game.moves();
@@ -94,8 +92,10 @@ var calcBestMove = function(depth, game, playerColor,
     // Make the move, but undo before exiting loop
     game.move(move);
     // Recursively get the value from this move
-    
     value = calcBestMove(depth-1, game, playerColor, alpha, beta, !isMaximizingPlayer)[0];
+    if(game.in_checkmate() == true){
+    value = 10000000;
+    } 
     // Log the value of this move
     console.log(isMaximizingPlayer ? 'Max: ' : 'Min: ', depth, move, value,
                 bestMove, bestMoveValue);
@@ -126,18 +126,22 @@ var calcBestMove = function(depth, game, playerColor,
   // Log the best move at the current depth
   console.log('Depth: ' + depth + ' | Best Move: ' + bestMove + ' | ' + bestMoveValue + ' | A: ' + alpha + ' | B: ' + beta);
   // Return the best move, or the only move
-  table[game.fen()] = [bestMoveValue,bestMove];
+
   return [bestMoveValue, bestMove || possibleMoves[0]];
 }
 
 // not working properly
 var interativeDeepening = function(game,skill)
 {
-  for(var distance = 1; distance <= skill; distance++) {
+  var table = {};
+
+  for(var distance = 1; distance < skill; distance++) {
     console.log("Checking at Distance ="+distance);
     var bestmove = calcBestMove(distance,game,game.turn())[1];
+    table[game.fen()] = bestmove;
+
     }
-    table = {}
+
   return bestmove;  
 }
 

@@ -44,7 +44,7 @@ var playGame = function() {
     return;
   }
   skillW = 3;
-  skillB = 3;
+  skillB = 5;
 
   var skill = game.turn() === 'w' ? skillW : skillB;
   makeMove(skill);
