@@ -3,7 +3,7 @@ var board,
 
 isComputer = false;
 totalMoves = 0;
-var table;
+var table = {};
 
 var resetGame = function()
 {

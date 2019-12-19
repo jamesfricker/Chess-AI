@@ -6,6 +6,14 @@
  */
 var evaluateBoard = function(board, color) {
   // Sets the value for each piece using standard piece value
+  for (var key in table){
+      //console.log(game.fen(),key)
+      if(game.fen()=== key)
+      {
+        console.log("Looked at this Game before!")
+        return [evaluateBoard(game.board(),playerColor),table[game.fen()]];
+      }
+    }
   var pieceValue = {
     'p': 100,
     'n': 350,
@@ -48,17 +56,10 @@ var calcBestMove = function(depth, game, playerColor,
     value = evaluateBoard(game.board(), playerColor);
     return [value, null];
   }
-   for (var key in table){
-      //console.log(game.fen(),key)
-      if(game.fen()== key)
-      {
-        console.log("Looked at this Game before!")
-        return [evaluateBoard(game.board(),playerColor),table[game.fen()]];
-      }
-    }
+   
   // Recursive case: search possible moves
   var bestMove = null; // best move not set yet
-  var possibleMoves = game.moves();
+  var possibleMoves = game.moves({verbose:true});
   // Set random order for possible moves
   if(totalMoves<10){
     possibleMoves.sort(function(a, b){return 0.5 - Math.random()});
@@ -67,11 +68,11 @@ var calcBestMove = function(depth, game, playerColor,
     possibleMoves.sort(function(a, b)
       {
         game.move(a);
-        v1 = evaluateBoard();
+        v1 = evaluateBoard(game.board(),playerColor);
         game.undo();
 
         game.move(b);
-        v2 = evaluateBoard();
+        v2 = evaluateBoard(game.board(),playerColor);
         game.undo();
 
         if (v2 > v1) {
@@ -86,20 +87,29 @@ var calcBestMove = function(depth, game, playerColor,
   // Set a default best move value
   var bestMoveValue = isMaximizingPlayer ? Number.NEGATIVE_INFINITY
                                          : Number.POSITIVE_INFINITY;
+  var captureMoves = game.moves({verbose:true}).filter(obj=>{return obj.flags.indexOf("c")!=-1});                 
+  //console.log(possibleMoves,game.moves({verbose:true}).filter(obj=>{return obj.flags.indexOf("c")!=-1}));                                    
   // Search through all possible moves
   for (var i = 0; i < possibleMoves.length; i++) {
     var move = possibleMoves[i];
     // Make the move, but undo before exiting loop
-    game.move(move);
     // Recursively get the value from this move
-    value = calcBestMove(depth-1, game, playerColor, alpha, beta, !isMaximizingPlayer)[0];
+    game.move(move);
+    //console.log(move,i,possibleMoves.length,depth);
+    if(move.flags.indexOf("c")!=-1 && depth==1){
+      value = -Quiesce(-beta,-alpha);
+    }
+    else{
+      value = calcBestMove(depth-1, game, playerColor, alpha, beta, !isMaximizingPlayer)[0];
+    }
     if(game.in_checkmate() == true){
-    value = 10000000;
+      value = 10000000;
     } 
     // Log the value of this move
+    /*
     console.log(isMaximizingPlayer ? 'Max: ' : 'Min: ', depth, move, value,
                 bestMove, bestMoveValue);
-
+    */
     if (isMaximizingPlayer) {
       // Look for moves that maximize position
       if (value > bestMoveValue) {
@@ -119,29 +129,60 @@ var calcBestMove = function(depth, game, playerColor,
     game.undo();
     // Check for alpha beta pruning
     if (beta <= alpha) {
-      console.log('Prune', alpha, beta);
+      //console.log('Prune', alpha, beta);
       break;
     }
+
   }
   // Log the best move at the current depth
-  console.log('Depth: ' + depth + ' | Best Move: ' + bestMove + ' | ' + bestMoveValue + ' | A: ' + alpha + ' | B: ' + beta);
+  //console.log('Depth: ' + depth + ' | Best Move: ' + bestMove + ' | ' + bestMoveValue + ' | A: ' + alpha + ' | B: ' + beta);
   // Return the best move, or the only move
 
+  //table[game.fen()] = bestMove;
   return [bestMoveValue, bestMove || possibleMoves[0]];
 }
 
 // not working properly
 var interativeDeepening = function(game,skill)
 {
-  var table = {};
-
-  for(var distance = 1; distance < skill; distance++) {
-    console.log("Checking at Distance ="+distance);
-    var bestmove = calcBestMove(distance,game,game.turn())[1];
-    table[game.fen()] = bestmove;
-
-    }
+  table = {};
+  var bestmove;
+  for(var distance = 1; distance <= skill; distance++) {
+    //console.log("Checking at Distance ="+distance);
+    bestmove = calcBestMove(distance,game,game.turn())[1];
+  }
 
   return bestmove;  
 }
 
+var Quiesce = function(alpha,beta)
+{
+  var stand_pat = evaluateBoard(game.board(),game.turn());
+  var score;
+  //console.log("Testing for a Quiet State",alpha,beta,stand_pat);
+
+
+  if( stand_pat >= beta )
+        return stand_pat;
+    if( alpha < stand_pat )
+        alpha = stand_pat;
+
+  var possibleMoves = game.moves({verbose:true}); 
+  for (var i = 0; i<possibleMoves.length;i++){
+    var move = possibleMoves[i];
+    //console.log(move,i,possibleMoves.length);
+    if(move.flags.indexOf("c")!=-1)
+    {
+      game.move(move);
+      score = -Quiesce(-beta,-alpha);
+      game.undo();
+      if( score >= beta )
+            return score;
+        if( score > alpha )
+           alpha = score;
+    }
+
+  
+  }
+  return alpha;
+}

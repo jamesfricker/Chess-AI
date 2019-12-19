@@ -23,6 +23,7 @@ var makeMove = function(skill=4) {
   var move = interativeDeepening(game,skill);
   // Make the calculated move
   game.move(move);
+  console.log(move.from,move.to);
   // Update board positions
   board.position(game.fen());
 }
@@ -43,12 +44,12 @@ var playGame = function() {
     console.log('game over');
     return;
   }
-  skillW = 3;
+  skillW = 4;
   skillB = 4;
 
   var skill = game.turn() === 'w' ? skillW : skillB;
   makeMove(skill);
-
+  table = {};
   // timeout so animation can finish
   window.setTimeout(function() {
     playGame();
