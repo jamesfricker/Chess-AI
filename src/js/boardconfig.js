@@ -41,7 +41,7 @@ var onMoveEnd = function(oldPos, newPos) {
   }
 
   // Log the current game position
-  console.log(game.fen());
+  //console.log(game.fen());
 };
 
 // Check before pick pieces that it is white and game is not over
