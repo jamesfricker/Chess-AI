@@ -1,23 +1,26 @@
 {
-  "name": "Chess",
-  "version": "1.0.0",
-  "description": "",
-  "main": "app.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TehBigFr0g/Chess-AI.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/TehBigFr0g/Chess-AI/issues"
-  },
-  "homepage": "https://github.com/TehBigFr0g/Chess-AI#readme",
-  "dependencies": {
-    "express": "^4.17.3"
-  }
+    "name": "chess",
+    "version": "1.0.0",
+    "description": "A chess game application",
+    "main": "app.js",
+    "scripts": {
+        "start": "node app.js",
+        "dev": "node dev.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/TehBigFr0g/Chess-AI.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/TehBigFr0g/Chess-AI/issues"
+    },
+    "homepage": "https://github.com/TehBigFr0g/Chess-AI#readme",
+    "dependencies": {
+        "express": "^4.17.3",
+        "helmet": "^7.1.0"
+    }
 }
