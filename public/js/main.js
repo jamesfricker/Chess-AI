@@ -186,11 +186,9 @@ function closeGameOverModal() {
     document.getElementById('gameOverModal').classList.remove('show');
 }
 
-// Prevent default touch behavior to stop scrolling
-document.getElementById('board').addEventListener('touchstart', function (e) {
-    e.preventDefault();
-}, { passive: false });
-
-document.getElementById('board').addEventListener('touchmove', function (e) {
-    e.preventDefault();
+// Prevent scrolling while dragging pieces on mobile
+document.addEventListener('touchmove', function (event) {
+    if (event.target.closest('#board')) {
+        event.preventDefault();
+    }
 }, { passive: false });
