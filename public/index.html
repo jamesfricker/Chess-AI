@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game</title>
+    <link rel="stylesheet" href="./css/chessboard-0.3.0.min.css">
+    <link rel="stylesheet" href="./css/main.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        #board {
+            width: 100%;
+            max-width: 400px;
+            margin: 20px 0;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls select,
+        .controls button {
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .controls select:focus,
+        .controls button:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        @media (min-width: 600px) {
+            .controls {
+                flex-direction: row;
+            }
+        }
+
+        .highlight-move {
+            background-color: rgba(255, 255, 0, 0.5);
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+        }
+
+        .overlay.show {
+            display: block;
+        }
+
+        .game-over-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .game-over-modal.show {
+            display: block;
+        }
+
+        .game-over-modal p {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .game-over-modal button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .game-over-modal button:hover {
+            background-color: #0056b3;
+        }
+
+        .game-over-modal button:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.5);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="board"></div>
+    <div class="controls">
+        <label for="difficulty">Select Difficulty:</label>
+        <select id="difficulty">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+        </select>
+        <button id="resetButton">Reset the Game</button>
+        <button id="computerPlayButton">Computer v Computer</button>
+        <button id="undoButton">Undo</button>
+    </div>
+    <div class="overlay" id="overlay"></div>
+    <div class="game-over-modal" id="gameOverModal">
+        <p id="gameOverMessage"></p>
+        <button onclick="closeGameOverModal()">Close</button>
+    </div>
+    <script src="./js/jquery-3.2.1.min.js"></script>
+    <script src="./js/chess.min.js"></script>
+    <script src="./js/chessboard-0.3.0.min.js"></script>
+    <script src="./js/movecalc.js"></script>
+    <script src="./js/main.js"></script>
+</body>
+
+</html>
