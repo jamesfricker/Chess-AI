@@ -278,11 +278,3 @@ function iterativeDeepening(game, maxDepth) {
 function clearTranspositionTable() {
     transpositionTable.clear();
 }
-
-// Export functions if needed
-module.exports = {
-    calcBestMove,
-    iterativeDeepening,
-    evaluateBoard,
-    clearTranspositionTable
-};
