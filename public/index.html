@@ -60,6 +60,11 @@
             background-color: rgba(255, 255, 0, 0.5);
         }
 
+
+        .overlay.show {
+            display: block;
+        }
+
         .overlay {
             display: none;
             position: fixed;
@@ -69,10 +74,8 @@
             height: 100%;
             background: rgba(0, 0, 0, 0.7);
             z-index: 999;
-        }
-
-        .overlay.show {
-            display: block;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .game-over-modal {
@@ -87,6 +90,8 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             z-index: 1000;
             text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .game-over-modal.show {
@@ -121,6 +126,8 @@
 
 <body>
     <div id="board"></div>
+    <!-- Add this right after the <div id="board"></div> -->
+    <div id="moveIndicator" class="move-indicator" aria-live="polite"></div>
     <div class="controls">
         <label for="difficulty">Select Difficulty:</label>
         <select id="difficulty">
@@ -139,6 +146,7 @@
         <p id="gameOverMessage"></p>
         <button onclick="closeGameOverModal()">Close</button>
     </div>
+
     <script src="./js/jquery-3.2.1.min.js"></script>
     <script src="./js/chess.min.js"></script>
     <script src="./js/chessboard-0.3.0.min.js"></script>

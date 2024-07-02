@@ -1,194 +1,255 @@
-var board,
-    game = new Chess();
-
-isComputer = false;
-totalMoves = 0;
-var table = {};
+// Initialize the chess game and board
+var game = new Chess();
+var board = null;
+var isComputerPlayer = false;
 var skill = 3; // Default skill level
 
-var resetGame = function () {
+// DOM elements
+const difficultySelect = document.getElementById('difficulty');
+const resetButton = document.getElementById('resetButton');
+const computerPlayButton = document.getElementById('computerPlayButton');
+const undoButton = document.getElementById('undoButton');
+const overlay = document.getElementById('overlay');
+const gameOverModal = document.getElementById('gameOverModal');
+const gameOverMessage = document.getElementById('gameOverMessage');
+
+// Game configuration
+const config = {
+    draggable: true,
+    position: 'start',
+    onDragStart: onDragStart,
+    onDrop: onDrop,
+    onSnapEnd: onSnapEnd
+};
+
+// Initialize the game
+function initGame() {
+    board = ChessBoard('board', config);
+    addEventListeners();
+    console.log("Game initialized");
+}
+
+// Add event listeners
+function addEventListeners() {
+    resetButton.addEventListener('click', resetGame);
+    computerPlayButton.addEventListener('click', toggleComputerPlay);
+    undoButton.addEventListener('click', undoMove);
+    difficultySelect.addEventListener('change', setDifficulty);
+    document.addEventListener('touchmove', preventScrolling, { passive: false });
+}
+
+// Prevent scrolling on mobile
+function preventScrolling(event) {
+    if (event.target.closest('#board')) {
+        event.preventDefault();
+    }
+}
+
+// Reset the game
+function resetGame() {
+    console.log("Resetting game");
     game.reset();
     board.position(game.fen());
-    isComputer = false;
-    totalMoves = 0;
+    isComputerPlayer = false;
     closeGameOverModal();
 }
 
-// Set the difficulty level
-var setDifficulty = function (level) {
-    skill = parseInt(level, 10);
+// Set difficulty level
+function setDifficulty() {
+    skill = parseInt(difficultySelect.value, 10);
+    console.log(`Difficulty set to ${skill}`);
 }
 
-// Actions after any move
-var onMoveEnd = function (oldPos, newPos) {
-    removeHighlights();
-    // Alert if game is over
-    if (game.game_over() === true) {
-        var message = '';
-        if (game.in_checkmate() === true) {
-            message = 'Checkmate';
-        } else if (game.in_draw() === true) {
-            message = 'Draw';
-        } else if (game.in_stalemate() === true) {
-            message = 'Stalemate';
-        } else if (game.in_threefold_repetition() === true) {
-            message = 'Threefold Repetition';
-        } else {
-            message = 'Game Over';
-        }
-        totalMoves += 1;
-        showGameOverModal(message);
+// Toggle computer play
+function toggleComputerPlay() {
+    isComputerPlayer = !isComputerPlayer;
+    computerPlayButton.textContent = isComputerPlayer ? "Stop Computer" : "Computer v Computer";
+    if (isComputerPlayer && !checkGameOver()) {
+        makeComputerMove();
     }
-};
+}
 
-// Check before pick pieces that it is white and game is not over
-var onDragStart = function (source, piece, position, orientation) {
-    removeHighlights();
-    if (game.game_over() === true || piece.search(/^b/) !== -1) {
+// Undo last move
+function undoMove() {
+    game.undo();
+    board.position(game.fen());
+    if (isComputerPlayer) {
+        game.undo(); // Undo twice in computer vs computer mode
+        board.position(game.fen());
+    }
+}
+
+// Check if a move is legal and handle drag start
+function onDragStart(source, piece, position, orientation) {
+    if (game.game_over() || (game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+        (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
         return false;
     }
-    highlightMoves(source);
-};
+    highlightLegalMoves(source);
+}
 
-// Update the board position after the piece snap
-// for castling, en passant, pawn promotion
-var onSnapEnd = function () {
+// Handle piece drop
+function onDrop(source, target) {
+    removeHighlights();
+    var move = game.move({
+        from: source,
+        to: target,
+        promotion: 'q' // Always promote to queen for simplicity
+    });
+
+    if (move === null) return 'snapback';
+
+    // Check for game over after player's move
+    if (checkGameOver()) {
+        return;
+    }
+
+    if (isComputerPlayer) {
+        window.setTimeout(makeComputerMove, 250);
+    }
+}
+
+// Update the board position after the piece snap animation
+function onSnapEnd() {
     board.position(game.fen());
-};
+    checkGameOver(); // Check for game over after the board updates
+}
 
 // Highlight legal moves
-var highlightMoves = function (square) {
+function highlightLegalMoves(square) {
     var moves = game.moves({
         square: square,
         verbose: true
     });
 
-    if (moves.length === 0) return;
-
     moves.forEach(function (move) {
-        var squareEl = $('#board .square-' + move.to);
-        squareEl.addClass('highlight-move');
+        $(`#board .square-${move.to}`).addClass('highlight-move');
     });
 }
 
-// Remove highlighted squares
-var removeHighlights = function () {
+// Remove move highlights
+function removeHighlights() {
     $('#board .square-55d63').removeClass('highlight-move');
 }
 
-// Handles what to do after human makes move.
-// Computer automatically makes next move
-var onDrop = function (source, target) {
+// Add this with the other DOM elements at the top of the file
+const moveIndicator = document.getElementById('moveIndicator');
+
+// Add this function to update the move indicator
+function updateMoveIndicator() {
+    const currentPlayer = game.turn() === 'w' ? 'White' : 'Black';
+    moveIndicator.textContent = `${currentPlayer}'s turn`;
+    moveIndicator.className = `move-indicator ${game.turn()}-turn`;
+    moveIndicator.setAttribute('aria-label', `It's ${currentPlayer}'s turn`);
+}
+
+// Modify the initGame function to include the initial move indicator update
+function initGame() {
+    board = ChessBoard('board', config);
+    addEventListeners();
+    updateMoveIndicator();
+    console.log("Game initialized");
+}
+
+// Modify the resetGame function to update the move indicator
+function resetGame() {
+    console.log("Resetting game");
+    game.reset();
+    board.position(game.fen());
+    isComputerPlayer = false;
+    closeGameOverModal();
+    updateMoveIndicator();
+}
+
+// Modify the onDrop function to update the move indicator after a move
+function onDrop(source, target) {
     removeHighlights();
-    // see if the move is legal
     var move = game.move({
         from: source,
         to: target,
-        promotion: 'q' // NOTE: always promote to a queen for example simplicity
+        promotion: 'q' // Always promote to queen for simplicity
     });
-    // If illegal move, snapback
+
     if (move === null) return 'snapback';
 
-    // Log the move
-    // console.log(move)
+    updateMoveIndicator();
 
-    window.setTimeout(function () {
-        makeMove();
-    }, 250);
-};
+    // Check for game over after player's move
+    if (checkGameOver()) {
+        return;
+    }
 
-// Computer makes a move with algorithm choice and skill/depth level
-var makeMove = function () {
-    // exit if the game is over
+    if (isComputerPlayer) {
+        window.setTimeout(makeComputerMove, 250);
+    }
+}
+
+// Modify the makeComputerMove function to update the move indicator after the computer's move
+function makeComputerMove() {
+    if (game.game_over()) return;
+
+    console.log("Computer is thinking...");
     var start = new Date().getTime();
-
-    if (game.game_over() === true) {
-        console.log('game over');
-        return;
-    }
-    var pc = game.turn() === 'w' ? "w" : "b";
-
-    var move = calcBestMove(skill, game, pc)[1];
-    //var move = interativeDeepening(game,skill);
-
-    // Make the calculated move
+    var move = calcBestMove(skill, game, game.turn())[1];
     game.move(move);
-    console.log(move.from, move.to);
-    // Update board positions
-    var end = new Date().getTime();
-    var time = end - start;
-    console.log('Time to move: ' + time);
     board.position(game.fen());
-}
+    updateMoveIndicator();
 
-var computerPlay = function () {
-    isComputer = true;
-    playGame();
-}
+    var end = new Date().getTime();
+    console.log(`Computer moved ${move.from}-${move.to} in ${end - start}ms`);
 
-// Computer vs Computer
-var playGame = function () {
-    if (isComputer == false) {
-        return 0;
-    }
-    if (game.game_over() === true) {
-        console.log('game over');
+    // Check for game over after computer's move
+    if (checkGameOver()) {
         return;
     }
-    skillW = skill; // Use the selected skill level
-    skillB = skill; // Use the selected skill level
 
-    var skillLevel = game.turn() === 'w' ? skillW : skillB;
-    makeMove(skillLevel);
-    table = {};
-    // timeout so animation can finish
-    window.setTimeout(function () {
-        playGame();
-    }, 250);
-};
-
-var undoMove = function () {
-    game.undo();
-    board.position(game.fen());
-}
-
-// Configure board
-var cfg = {
-    draggable: true,
-    position: 'start',
-    moveSpeed: 50,
-
-    // Handlers for user actions
-    onMoveEnd: onMoveEnd,
-    onDragStart: onDragStart,
-    onDrop: onDrop,
-    onSnapEnd: onSnapEnd
-}
-
-board = ChessBoard('board', cfg);
-
-// Add event listeners for buttons and dropdown
-document.getElementById('resetButton').addEventListener('click', resetGame);
-document.getElementById('computerPlayButton').addEventListener('click', computerPlay);
-document.getElementById('undoButton').addEventListener('click', undoMove);
-document.getElementById('difficulty').addEventListener('change', function () {
-    setDifficulty(this.value);
-});
-
-function showGameOverModal(message) {
-    document.getElementById('gameOverMessage').textContent = message;
-    document.getElementById('overlay').classList.add('show');
-    document.getElementById('gameOverModal').classList.add('show');
-}
-
-function closeGameOverModal() {
-    document.getElementById('overlay').classList.remove('show');
-    document.getElementById('gameOverModal').classList.remove('show');
-}
-
-// Prevent scrolling while dragging pieces on mobile
-document.addEventListener('touchmove', function (event) {
-    if (event.target.closest('#board')) {
-        event.preventDefault();
+    if (isComputerPlayer) {
+        window.setTimeout(makeComputerMove, 250);
     }
-}, { passive: false });
+}
+
+// Modify the checkGameOver function to update the move indicator when the game ends
+function checkGameOver() {
+    if (game.game_over()) {
+        let message;
+        if (game.in_checkmate()) {
+            const winner = game.turn() === 'w' ? 'Black' : 'White';
+            message = `${winner} wins by checkmate!`;
+        } else if (game.in_draw()) {
+            message = 'Game ends in a draw.';
+        } else if (game.in_stalemate()) {
+            message = 'Game ends in a stalemate.';
+        } else if (game.in_threefold_repetition()) {
+            message = 'Game ends in a draw by threefold repetition.';
+        } else {
+            message = 'Game Over';
+        }
+        moveIndicator.textContent = 'Game Over';
+        moveIndicator.className = 'move-indicator';
+        moveIndicator.setAttribute('aria-label', 'Game Over');
+        showGameOverModal(message);
+        return true;
+    }
+    return false;
+}
+
+// Show game over modal
+function showGameOverModal(message) {
+    console.log(`Game over: ${message}`);
+    gameOverMessage.textContent = message;
+    overlay.style.display = 'block';
+    gameOverModal.style.display = 'block';
+    overlay.style.opacity = '1';
+    gameOverModal.style.opacity = '1';
+}
+
+// Close game over modal
+function closeGameOverModal() {
+    overlay.style.display = 'none';
+    gameOverModal.style.display = 'none';
+    overlay.style.opacity = '0';
+    gameOverModal.style.opacity = '0';
+}
+
+// Initialize the game when the script loads
+initGame();

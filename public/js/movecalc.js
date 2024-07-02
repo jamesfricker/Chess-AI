@@ -1,41 +1,134 @@
+// Transposition table
+const transpositionTable = new Map();
+
+// Constants
+const INFINITY = 1000000;
+const MAX_QUIESCENCE_DEPTH = 5;
+
+// Piece values
+const pieceValue = {
+    'p': 100,
+    'n': 320,
+    'b': 330,
+    'r': 500,
+    'q': 900,
+    'k': 20000
+};
+
+// Piece-Square tables for positional evaluation
+const pst = {
+    'p': [
+        0, 0, 0, 0, 0, 0, 0, 0,
+        50, 50, 50, 50, 50, 50, 50, 50,
+        10, 10, 20, 30, 30, 20, 10, 10,
+        5, 5, 10, 25, 25, 10, 5, 5,
+        0, 0, 0, 20, 20, 0, 0, 0,
+        5, -5, -10, 0, 0, -10, -5, 5,
+        5, 10, 10, -20, -20, 10, 10, 5,
+        0, 0, 0, 0, 0, 0, 0, 0
+    ],
+    'n': [
+        -50, -40, -30, -30, -30, -30, -40, -50,
+        -40, -20, 0, 0, 0, 0, -20, -40,
+        -30, 0, 10, 15, 15, 10, 0, -30,
+        -30, 5, 15, 20, 20, 15, 5, -30,
+        -30, 0, 15, 20, 20, 15, 0, -30,
+        -30, 5, 10, 15, 15, 10, 5, -30,
+        -40, -20, 0, 5, 5, 0, -20, -40,
+        -50, -40, -30, -30, -30, -30, -40, -50
+    ],
+    'b': [
+        -20, -10, -10, -10, -10, -10, -10, -20,
+        -10, 0, 0, 0, 0, 0, 0, -10,
+        -10, 0, 5, 10, 10, 5, 0, -10,
+        -10, 5, 5, 10, 10, 5, 5, -10,
+        -10, 0, 10, 10, 10, 10, 0, -10,
+        -10, 10, 10, 10, 10, 10, 10, -10,
+        -10, 5, 0, 0, 0, 0, 5, -10,
+        -20, -10, -10, -10, -10, -10, -10, -20
+    ],
+    'r': [
+        0, 0, 0, 0, 0, 0, 0, 0,
+        5, 10, 10, 10, 10, 10, 10, 5,
+        -5, 0, 0, 0, 0, 0, 0, -5,
+        -5, 0, 0, 0, 0, 0, 0, -5,
+        -5, 0, 0, 0, 0, 0, 0, -5,
+        -5, 0, 0, 0, 0, 0, 0, -5,
+        -5, 0, 0, 0, 0, 0, 0, -5,
+        0, 0, 0, 5, 5, 0, 0, 0
+    ],
+    'q': [
+        -20, -10, -10, -5, -5, -10, -10, -20,
+        -10, 0, 0, 0, 0, 0, 0, -10,
+        -10, 0, 5, 5, 5, 5, 0, -10,
+        -5, 0, 5, 5, 5, 5, 0, -5,
+        0, 0, 5, 5, 5, 5, 0, -5,
+        -10, 5, 5, 5, 5, 5, 0, -10,
+        -10, 0, 5, 0, 0, 0, 0, -10,
+        -20, -10, -10, -5, -5, -10, -10, -20
+    ],
+    'k': [
+        -30, -40, -40, -50, -50, -40, -40, -30,
+        -30, -40, -40, -50, -50, -40, -40, -30,
+        -30, -40, -40, -50, -50, -40, -40, -30,
+        -30, -40, -40, -50, -50, -40, -40, -30,
+        -20, -30, -30, -40, -40, -30, -30, -20,
+        -10, -20, -20, -20, -20, -20, -20, -10,
+        20, 20, 0, 0, 0, 0, 20, 20,
+        20, 30, 10, 0, 0, 10, 30, 20
+    ]
+};
 
 /**
  * Evaluates current chess board relative to player
+ * @param {Array} board - The chess board
  * @param {string} color - Players color, either 'b' or 'w'
  * @return {Number} board value relative to player
  */
-var evaluateBoard = function(board, color) {
-  // Sets the value for each piece using standard piece value
-  for (var key in table){
-      //console.log(game.fen(),key)
-      if(game.fen()=== key)
-      {
-        console.log("Looked at this Game before!")
-        return [evaluateBoard(game.board(),playerColor),table[game.fen()]];
-      }
+function evaluateBoard(board, color) {
+    let value = 0;
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            const piece = board[i][j];
+            if (piece) {
+                const pieceIndex = i * 8 + j;
+                const positionValue = pst[piece.type][color === 'w' ? pieceIndex : 63 - pieceIndex];
+                value += (pieceValue[piece.type] + positionValue) * (piece.color === color ? 1 : -1);
+            }
+        }
     }
-  var pieceValue = {
-    'p': 100,
-    'n': 350,
-    'b': 350,
-    'r': 525,
-    'q': 1000,
-    'k': 10000
-  };
-  // Loop through all pieces on the board and sum up total
-  var value = 0;
-  board.forEach(function(row) {
-    row.forEach(function(piece) {
-      if (piece) {
-        // Subtract piece value if it is opponent's piece
-        value += pieceValue[piece['type']]
-                 * (piece['color'] === color ? 1 : -1);
-      }
-    });
-  });
-  return value;
-};
+    return value;
+}
 
+/**
+ * Orders moves to improve alpha-beta pruning efficiency
+ * @param {Array} moves - List of possible moves
+ * @param {Object} game - The game object
+ * @param {string} playerColor - Players color
+ * @return {Array} Ordered list of moves
+ */
+function orderMoves(moves, game, playerColor) {
+    return moves.sort((a, b) => {
+        const aScore = getMoveScore(a, game, playerColor);
+        const bScore = getMoveScore(b, game, playerColor);
+        return bScore - aScore;
+    });
+}
+
+/**
+ * Calculates a heuristic score for a move
+ * @param {Object} move - The move to evaluate
+ * @param {Object} game - The game object
+ * @param {string} playerColor - Players color
+ * @return {Number} Heuristic score for the move
+ */
+function getMoveScore(move, game, playerColor) {
+    let score = 0;
+    if (move.captured) score += 10 * pieceValue[move.captured];
+    if (move.promotion) score += pieceValue[move.promotion] - pieceValue['p'];
+    if (game.in_check()) score += 50;
+    return score;
+}
 
 /**
  * Calculates the best move using Minimax with Alpha Beta Pruning.
@@ -47,166 +140,149 @@ var evaluateBoard = function(board, color) {
  * @param {Boolean} isMaximizingPlayer - If current turn is maximizing or minimizing player
  * @return {Array} The best move value, and the best move
  */
-var calcBestMove = function(depth, game, playerColor,
-                            alpha=Number.NEGATIVE_INFINITY,
-                            beta=Number.POSITIVE_INFINITY,
-                            isMaximizingPlayer=true) {
-  var value = 0;
-  // Base case: evaluate board
-  if (depth === 0) {
-    value = evaluateBoard(game.board(), playerColor);
-    return [value, null];
-  }
+function calcBestMove(depth, game, playerColor, alpha = -INFINITY, beta = INFINITY, isMaximizingPlayer = true) {
+    const fen = game.fen();
+    const ttEntry = transpositionTable.get(fen);
+    if (ttEntry && ttEntry.depth >= depth) {
+        return [ttEntry.value, ttEntry.bestMove];
+    }
 
+    if (depth === 0) {
+        return [evaluateBoard(game.board(), playerColor), null];
+    }
 
-  // Recursive case: search possible moves
-  var bestMove = null; // best move not set yet
-  var possibleMoves = game.moves();
-  // Set random order for possible moves
-  if(totalMoves<10){
-    possibleMoves.sort(function(a, b){return 0.5 - Math.random()});
-  }
-  else{
-    possibleMoves.sort(function(a, b)
-      {
-        game.move(a);
-        v1 = evaluateBoard(game.board(),playerColor);
+    let bestMove = null;
+    let bestMoveValue = isMaximizingPlayer ? -INFINITY : INFINITY;
+
+    const possibleMoves = orderMoves(game.moves({ verbose: true }), game, playerColor);
+
+    for (const move of possibleMoves) {
+        game.move(move);
+
+        let value;
+        if (depth === 1 && move.captured) {
+            value = -Quiesce(-beta, -alpha, 0, game, playerColor);
+        } else {
+            value = calcBestMove(depth - 1, game, playerColor, alpha, beta, !isMaximizingPlayer)[0];
+        }
+
         game.undo();
 
-        game.move(b);
-        v2 = evaluateBoard(game.board(),playerColor);
-        game.undo();
-
-        if (v2 > v1) {
-          return 1;
+        if (game.in_checkmate()) {
+            value = isMaximizingPlayer ? INFINITY : -INFINITY;
         }
-        if (v1 > v2) {
-            return -1;
+
+        if (isMaximizingPlayer) {
+            if (value > bestMoveValue) {
+                bestMoveValue = value;
+                bestMove = move;
+            }
+            alpha = Math.max(alpha, value);
+        } else {
+            if (value < bestMoveValue) {
+                bestMoveValue = value;
+                bestMove = move;
+            }
+            beta = Math.min(beta, value);
         }
-        return 0;
-      });
-  }
-  // Set a default best move value
-  var bestMoveValue = isMaximizingPlayer ? Number.NEGATIVE_INFINITY
-                                         : Number.POSITIVE_INFINITY;
-  //var captureMoves = game.moves({verbose:true}).filter(obj=>{return obj.flags.indexOf("c")!=-1});
-  //console.log(possibleMoves,game.moves({verbose:true}).filter(obj=>{return obj.flags.indexOf("c")!=-1}));
-  // Search through all possible moves
-  var v_b = evaluateBoard(game.board(),playerColor);
 
-  for (var i = 0; i < possibleMoves.length; i++) {
-    var move = possibleMoves[i];
-    // Make the move, but undo before exiting loop
-    // Recursively get the value from this move
-    game.move(move);
-    var v_a = evaluateBoard(game.board(),playerColor);
-    if(depth == 1 & v_b!=v_a){
-      value = -Quiesce(-beta,-alpha,0);
-    }
-    else{
-      value = calcBestMove(depth-1, game, playerColor, alpha, beta, !isMaximizingPlayer)[0];
+        if (beta <= alpha) {
+            break;
+        }
     }
 
-    //console.log(move,i,possibleMoves.length,depth);
-  /*
-    if(move.flags.indexOf("c")!=-1 && depth==3){
-      value = -Quiesce(-beta,-alpha);
-    }
-    else{
+    transpositionTable.set(fen, { depth, value: bestMoveValue, bestMove });
 
-*/
-    //}
-    if(game.in_checkmate() == true){
-      value = 10000000;
-    }
-    // Log the value of this move
-
-    //console.log(isMaximizingPlayer ? 'Max: ' : 'Min: ', depth, move, value,
-    //            bestMove, bestMoveValue);
-
-    if (isMaximizingPlayer) {
-      // Look for moves that maximize position
-      if (value > bestMoveValue) {
-        bestMoveValue = value;
-        bestMove = move;
-      }
-      alpha = Math.max(alpha, value);
-    } else {
-      // Look for moves that minimize position
-      if (value < bestMoveValue) {
-        bestMoveValue = value;
-        bestMove = move;
-      }
-      beta = Math.min(beta, value);
-    }
-    // Undo previous move
-    game.undo();
-    // Check for alpha beta pruning
-    if (beta <= alpha) {
-      //console.log('Prune', alpha, beta);
-      break;
-    }
-
-  }
-  // Log the best move at the current depth
-  //console.log('Depth: ' + depth + ' | Best Move: ' + bestMove + ' | ' + bestMoveValue + ' | A: ' + alpha + ' | B: ' + beta);
-  // Return the best move, or the only move
-  //table[[game.fen(),depth]] = [bestMoveValue,bestMove];
-  return [bestMoveValue, bestMove || possibleMoves[0]];
+    return [bestMoveValue, bestMove || possibleMoves[0]];
 }
 
-// not working properly
-var interativeDeepening = function(game,skill)
-{
-  table = {};
-  var bestmove;
-  for(var distance = 1; distance <= skill; distance++) {
-    //console.log("Checking at Distance ="+distance);
-    bestmove = calcBestMove(distance,game,game.turn())[1];
-  }
+/**
+ * Performs quiescence search to evaluate tactical sequences
+ * @param {Number} alpha
+ * @param {Number} beta
+ * @param {Number} depth
+ * @param {Object} game
+ * @param {string} playerColor
+ * @return {Number} Evaluation after quiescence search
+ */
+function Quiesce(alpha, beta, depth, game, playerColor) {
+    const standPat = evaluateBoard(game.board(), playerColor);
 
-  return bestmove;
-}
+    if (depth === MAX_QUIESCENCE_DEPTH) {
+        return standPat;
+    }
 
-var Quiesce = function(alpha,beta,depth)
-{
-  var stand_pat = evaluateBoard(game.board(),game.turn());
-
-  if(depth == 5){
-    if( stand_pat >= beta )
-          return beta;
-    return alpha;
-  }
-  var score;
-  //console.log("Testing for a Quiet State",alpha,beta,stand_pat);
-
-
-  if( stand_pat >= beta )
+    if (standPat >= beta) {
         return beta;
-    if( alpha < stand_pat )
-        alpha = stand_pat;
-
-  var possibleMoves = game.moves({verbose:true});
-  for (var i = 0; i<possibleMoves.length;i++){
-    var move = possibleMoves[i];
-    //console.log(move,i,possibleMoves.length);
-    game.move(move);
-
-    if(game.in_checkmate() == true){
-      score =  -10000000;
     }
-    else if(move.flags.indexOf("c")!=-1)
-    {
-      score = -Quiesce(-beta,-alpha,depth+1);
+    if (alpha < standPat) {
+        alpha = standPat;
     }
-      game.undo();
-      if( score >= beta )
+
+    const captureMoves = game.moves({ verbose: true }).filter(move => move.captured);
+
+    for (const move of captureMoves) {
+        game.move(move);
+
+        let score;
+        if (game.in_checkmate()) {
+            score = INFINITY;
+        } else {
+            score = -Quiesce(-beta, -alpha, depth + 1, game, playerColor);
+        }
+
+        game.undo();
+
+        if (score >= beta) {
             return beta;
-        if( score > alpha )
-           alpha = score;
+        }
+        if (score > alpha) {
+            alpha = score;
+        }
     }
 
-
-
-  return alpha;
+    return alpha;
 }
+
+/**
+ * Performs iterative deepening to find the best move
+ * @param {Object} game - The game object
+ * @param {Number} maxDepth - The maximum depth to search
+ * @return {Object} The best move
+ */
+function iterativeDeepening(game, maxDepth) {
+    transpositionTable.clear();
+    let bestMove;
+    let bestMoveValue = -INFINITY;
+
+    for (let depth = 1; depth <= maxDepth; depth++) {
+        const [moveValue, move] = calcBestMove(depth, game, game.turn());
+
+        if (moveValue > bestMoveValue || !bestMove) {
+            bestMoveValue = moveValue;
+            bestMove = move;
+        }
+
+        // If we've found a winning move, no need to search deeper
+        if (moveValue === INFINITY) {
+            break;
+        }
+    }
+
+    return bestMove;
+}
+
+/**
+ * Clears the transposition table
+ */
+function clearTranspositionTable() {
+    transpositionTable.clear();
+}
+
+// Export functions if needed
+module.exports = {
+    calcBestMove,
+    iterativeDeepening,
+    evaluateBoard,
+    clearTranspositionTable
+};
