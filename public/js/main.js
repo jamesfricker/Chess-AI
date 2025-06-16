@@ -71,11 +71,26 @@ function toggleComputerPlay() {
 
 // Undo last move
 function undoMove() {
-    game.undo();
-    board.position(game.fen());
-    if (isComputerPlayer) {
-        game.undo(); // Undo twice in computer vs computer mode
+    try {
+        const undoResult = game.undo();
+        if (!undoResult) {
+            console.log('No moves to undo');
+            return;
+        }
+        
         board.position(game.fen());
+        updateMoveIndicator();
+        
+        if (isComputerPlayer) {
+            const secondUndo = game.undo(); // Undo twice in computer vs computer mode
+            if (secondUndo) {
+                board.position(game.fen());
+                updateMoveIndicator();
+            }
+        }
+    } catch (error) {
+        console.error('Error during undo:', error);
+        alert('Unable to undo move. Please try again.');
     }
 }
 
@@ -145,42 +160,63 @@ function updateMoveIndicator() {
 
 // Modify the initGame function to include the initial move indicator update
 function initGame() {
-    board = ChessBoard('board', config);
-    addEventListeners();
-    updateMoveIndicator();
-    console.log("Game initialized");
+    try {
+        board = ChessBoard('board', config);
+        if (!board) {
+            throw new Error('Failed to initialize chessboard');
+        }
+        addEventListeners();
+        updateMoveIndicator();
+        console.log("Game initialized");
+    } catch (error) {
+        console.error('Failed to initialize game:', error);
+        alert('Failed to initialize the chess game. Please refresh the page.');
+    }
 }
 
 // Modify the resetGame function to update the move indicator
 function resetGame() {
-    console.log("Resetting game");
-    game.reset();
-    board.position(game.fen());
-    isComputerPlayer = false;
-    closeGameOverModal();
-    updateMoveIndicator();
+    try {
+        console.log("Resetting game");
+        game.reset();
+        board.position(game.fen());
+        isComputerPlayer = false;
+        computerPlayButton.textContent = "Computer v Computer";
+        closeGameOverModal();
+        updateMoveIndicator();
+    } catch (error) {
+        console.error('Error resetting game:', error);
+        alert('Error resetting the game. Please refresh the page.');
+    }
 }
 
 // Modify the onDrop function to update the move indicator after a move
 function onDrop(source, target) {
     removeHighlights();
-    var move = game.move({
-        from: source,
-        to: target,
-        promotion: 'q' // Always promote to queen for simplicity
-    });
+    
+    try {
+        var move = game.move({
+            from: source,
+            to: target,
+            promotion: 'q' // Always promote to queen for simplicity
+        });
 
-    if (move === null) return 'snapback';
+        if (move === null) return 'snapback';
 
-    updateMoveIndicator();
+        updateMoveIndicator();
 
-    // Check for game over after player's move
-    if (checkGameOver()) {
-        return;
-    }
+        // Check for game over after player's move
+        if (checkGameOver()) {
+            return;
+        }
 
-    if (isComputerPlayer) {
-        window.setTimeout(makeComputerMove, 250);
+        if (isComputerPlayer) {
+            window.setTimeout(makeComputerMove, 250);
+        }
+    } catch (error) {
+        console.error('Error during move execution:', error);
+        alert('Invalid move. Please try again.');
+        return 'snapback';
     }
 }
 
@@ -188,23 +224,49 @@ function onDrop(source, target) {
 function makeComputerMove() {
     if (game.game_over()) return;
 
-    console.log("Computer is thinking...");
-    var start = new Date().getTime();
-    var move = calcBestMove(skill, game, game.turn())[1];
-    game.move(move);
-    board.position(game.fen());
-    updateMoveIndicator();
+    try {
+        console.log("Computer is thinking...");
+        var start = new Date().getTime();
+        var bestMoveResult = calcBestMove(skill, game, game.turn());
+        
+        if (!bestMoveResult || !bestMoveResult[1]) {
+            console.error('Computer failed to calculate a move');
+            alert('Computer encountered an error. Game will continue without computer moves.');
+            isComputerPlayer = false;
+            computerPlayButton.textContent = "Computer v Computer";
+            return;
+        }
+        
+        var move = bestMoveResult[1];
+        var moveResult = game.move(move);
+        
+        if (!moveResult) {
+            console.error('Computer calculated an invalid move:', move);
+            alert('Computer calculated an invalid move. Game will continue without computer moves.');
+            isComputerPlayer = false;
+            computerPlayButton.textContent = "Computer v Computer";
+            return;
+        }
+        
+        board.position(game.fen());
+        updateMoveIndicator();
 
-    var end = new Date().getTime();
-    console.log(`Computer moved ${move.from}-${move.to} in ${end - start}ms`);
+        var end = new Date().getTime();
+        console.log(`Computer moved ${move.from}-${move.to} in ${end - start}ms`);
 
-    // Check for game over after computer's move
-    if (checkGameOver()) {
-        return;
-    }
+        // Check for game over after computer's move
+        if (checkGameOver()) {
+            return;
+        }
 
-    if (isComputerPlayer) {
-        window.setTimeout(makeComputerMove, 250);
+        if (isComputerPlayer) {
+            window.setTimeout(makeComputerMove, 250);
+        }
+    } catch (error) {
+        console.error('Error during computer move:', error);
+        alert('Computer encountered an error. Game will continue without computer moves.');
+        isComputerPlayer = false;
+        computerPlayButton.textContent = "Computer v Computer";
     }
 }
 
