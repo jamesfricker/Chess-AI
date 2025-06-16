@@ -100,13 +100,19 @@ function evaluateBoard(board, color) {
             for (let j = 0; j < 8; j++) {
                 const piece = board[i][j];
                 if (piece && piece.type && piece.color) {
-                    const pieceIndex = i * 8 + j;
+                    // Convert chess.js board coordinates to PST index
+                    // chess.js: board[0][0] = a8, board[7][7] = h1
+                    // PST: index 0 = a1, index 63 = h8
+                    const pstIndex = (7 - i) * 8 + j;
                     const pieceTypeValue = pieceValue[piece.type];
                     const positionTable = pst[piece.type];
                     
-                    if (pieceTypeValue && positionTable && pieceIndex >= 0 && pieceIndex < 64) {
-                        const positionValue = positionTable[color === 'w' ? pieceIndex : 63 - pieceIndex];
-                        value += (pieceTypeValue + (positionValue || 0)) * (piece.color === color ? 1 : -1);
+                    if (pieceTypeValue && positionTable && pstIndex >= 0 && pstIndex < 64) {
+                        // For white pieces, use PST as-is
+                        // For black pieces, flip the index (black's perspective)
+                        const adjustedIndex = piece.color === 'w' ? pstIndex : 63 - pstIndex;
+                        const positionValue = positionTable[adjustedIndex] || 0;
+                        value += (pieceTypeValue + positionValue) * (piece.color === color ? 1 : -1);
                     }
                 }
             }
@@ -187,7 +193,11 @@ function calcBestMove(depth, game, playerColor, alpha = -INFINITY, beta = INFINI
                 game.move(move);
 
                 let value;
-                if (depth === 1 && move.captured) {
+                // Check for checkmate immediately after making the move
+                if (game.in_checkmate()) {
+                    value = isMaximizingPlayer ? INFINITY : -INFINITY;
+                    console.log(`Checkmate detected! Move ${move.from}-${move.to} leads to checkmate. Value: ${value} (isMaximizingPlayer: ${isMaximizingPlayer})`);
+                } else if (depth === 1 && move.captured) {
                     value = -Quiesce(-beta, -alpha, 0, game, playerColor);
                 } else {
                     const result = calcBestMove(depth - 1, game, playerColor, alpha, beta, !isMaximizingPlayer);
@@ -199,10 +209,6 @@ function calcBestMove(depth, game, playerColor, alpha = -INFINITY, beta = INFINI
                 }
 
                 game.undo();
-
-                if (game.in_checkmate()) {
-                    value = isMaximizingPlayer ? INFINITY : -INFINITY;
-                }
 
                 if (isMaximizingPlayer) {
                     if (value > bestMoveValue) {
@@ -272,6 +278,7 @@ function Quiesce(alpha, beta, depth, game, playerColor) {
                 let score;
                 if (game.in_checkmate()) {
                     score = INFINITY;
+                    console.log(`Quiesce: Checkmate detected! Move ${move.from}-${move.to} leads to checkmate in quiescence search.`);
                 } else {
                     score = -Quiesce(-beta, -alpha, depth + 1, game, playerColor);
                 }

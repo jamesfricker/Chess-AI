@@ -235,6 +235,19 @@ function initGame() {
         updateEvaluationDisplay(0); // Initialize with even evaluation
         computerPlayButton.textContent = "Select Mode";
         console.log("Game initialized - showing mode selection");
+        
+        // Validate PST indexing is working correctly
+        const testBoard = game.board();
+        const whitePawnE2 = testBoard[6][4]; // e2 white pawn
+        const blackPawnE7 = testBoard[1][4]; // e7 black pawn
+        if (whitePawnE2 && blackPawnE7) {
+            const e2PstIndex = (7 - 6) * 8 + 4;
+            const e7PstIndex = (7 - 1) * 8 + 4;
+            const whiteE2Value = pst.p[e2PstIndex];
+            const blackE7Value = pst.p[63 - e7PstIndex];
+            console.log(`PST Validation: White e2 pawn value: ${whiteE2Value}, Black e7 pawn value: ${blackE7Value} (both should be ~50)`);
+        }
+        
         showGameModeSelection();
     } catch (error) {
         console.error('Failed to initialize game:', error);
