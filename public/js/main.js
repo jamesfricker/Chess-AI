@@ -1,7 +1,7 @@
 // Initialize the chess game and board
 var game = new Chess();
 var board = null;
-var isComputerPlayer = false;
+var gameMode = 'none'; // 'playerVsComputer', 'computerVsComputer', 'none'
 var skill = 3; // Default skill level
 
 // DOM elements
@@ -12,6 +12,10 @@ const undoButton = document.getElementById('undoButton');
 const overlay = document.getElementById('overlay');
 const gameOverModal = document.getElementById('gameOverModal');
 const gameOverMessage = document.getElementById('gameOverMessage');
+const gameModeOverlay = document.getElementById('gameModeOverlay');
+const gameModeModal = document.getElementById('gameModeModal');
+const playerVsComputerBtn = document.getElementById('playerVsComputerBtn');
+const computerVsComputerBtn = document.getElementById('computerVsComputerBtn');
 
 // Game configuration
 const config = {
@@ -32,9 +36,11 @@ function initGame() {
 // Add event listeners
 function addEventListeners() {
     resetButton.addEventListener('click', resetGame);
-    computerPlayButton.addEventListener('click', toggleComputerPlay);
+    computerPlayButton.addEventListener('click', showGameModeSelection);
     undoButton.addEventListener('click', undoMove);
     difficultySelect.addEventListener('change', setDifficulty);
+    playerVsComputerBtn.addEventListener('click', () => selectGameMode('playerVsComputer'));
+    computerVsComputerBtn.addEventListener('click', () => selectGameMode('computerVsComputer'));
     document.addEventListener('touchmove', preventScrolling, { passive: false });
 }
 
@@ -60,27 +66,34 @@ function setDifficulty() {
     console.log(`Difficulty set to ${skill}`);
 }
 
-// Toggle computer play
-function toggleComputerPlay() {
-    isComputerPlayer = !isComputerPlayer;
-    console.log(`Computer play toggled. isComputerPlayer: ${isComputerPlayer}, current turn: ${game.turn()}`);
+// Show game mode selection modal
+function showGameModeSelection() {
+    gameModeOverlay.style.display = 'block';
+    gameModeModal.style.display = 'block';
+}
+
+// Hide game mode selection modal
+function hideGameModeSelection() {
+    gameModeOverlay.style.display = 'none';
+    gameModeModal.style.display = 'none';
+}
+
+// Select game mode and start game
+function selectGameMode(mode) {
+    gameMode = mode;
+    hideGameModeSelection();
     
-    if (isComputerPlayer) {
-        computerPlayButton.textContent = "Stop Computer";
-        console.log('Computer enabled - button shows "Stop Computer"');
-        // If it's black's turn when enabling computer, make computer move
-        if (game.turn() === 'b' && !checkGameOver()) {
-            console.log('It is black\'s turn, triggering immediate computer move');
-            window.setTimeout(makeComputerMove, 250);
-        } else {
-            console.log('It is white\'s turn, waiting for player move');
-        }
-    } else {
-        computerPlayButton.textContent = "Play vs Computer";
-        console.log('Computer disabled - button shows "Play vs Computer"');
-        window.aiThinking = false;
+    if (mode === 'playerVsComputer') {
+        computerPlayButton.textContent = "Change Mode";
+        console.log('Player vs Computer mode selected');
+    } else if (mode === 'computerVsComputer') {
+        computerPlayButton.textContent = "Change Mode";
+        console.log('Computer vs Computer mode selected');
+        // Start computer vs computer immediately
+        setTimeout(makeComputerMove, 500);
     }
 }
+
 
 // Undo last move
 function undoMove() {
@@ -94,7 +107,7 @@ function undoMove() {
         board.position(game.fen());
         updateMoveIndicator();
         
-        if (isComputerPlayer) {
+        if (gameMode === 'computerVsComputer') {
             const secondUndo = game.undo(); // Undo twice in computer vs computer mode
             if (secondUndo) {
                 board.position(game.fen());
@@ -152,7 +165,7 @@ function updateMoveIndicator() {
     moveIndicator.setAttribute('aria-label', `It's ${currentPlayer}'s turn`);
 }
 
-// Modify the initGame function to include the initial move indicator update
+// Initialize the game and show mode selection
 function initGame() {
     try {
         board = ChessBoard('board', config);
@@ -163,26 +176,29 @@ function initGame() {
         updateMoveIndicator();
         resetPositionsCounter();
         aiCounter.textContent = "Positions evaluated: 0";
-        console.log("Game initialized");
+        computerPlayButton.textContent = "Select Mode";
+        console.log("Game initialized - showing mode selection");
+        showGameModeSelection();
     } catch (error) {
         console.error('Failed to initialize game:', error);
         alert('Failed to initialize the chess game. Please refresh the page.');
     }
 }
 
-// Modify the resetGame function to update the move indicator
+// Reset the game and show mode selection
 function resetGame() {
     try {
         console.log("Resetting game");
         window.aiThinking = false;
         game.reset();
         board.position(game.fen());
-        isComputerPlayer = false;
-        computerPlayButton.textContent = "Play vs Computer";
+        gameMode = 'none';
+        computerPlayButton.textContent = "Select Mode";
         closeGameOverModal();
         updateMoveIndicator();
         resetPositionsCounter();
         aiCounter.textContent = "Positions evaluated: 0";
+        showGameModeSelection();
     } catch (error) {
         console.error('Error resetting game:', error);
         alert('Error resetting the game. Please refresh the page.');
@@ -194,6 +210,12 @@ function onDrop(source, target) {
     removeHighlights();
     
     try {
+        // Don't allow moves if no game mode is selected
+        if (gameMode === 'none') {
+            alert('Please select a game mode first!');
+            return 'snapback';
+        }
+
         var move = game.move({
             from: source,
             to: target,
@@ -203,19 +225,20 @@ function onDrop(source, target) {
         if (move === null) return 'snapback';
 
         updateMoveIndicator();
-        console.log(`Player moved ${move.from}-${move.to}, isComputerPlayer: ${isComputerPlayer}, current turn: ${game.turn()}`);
+        console.log(`Player moved ${move.from}-${move.to}, gameMode: ${gameMode}, current turn: ${game.turn()}`);
 
         // Check for game over after player's move
         if (checkGameOver()) {
             return;
         }
 
-        // Trigger computer move if computer is enabled
-        if (isComputerPlayer) {
-            console.log('Triggering computer move...');
+        // Trigger computer move based on game mode
+        if (gameMode === 'playerVsComputer') {
+            console.log('Player vs Computer: Triggering computer move...');
             window.setTimeout(makeComputerMove, 250);
-        } else {
-            console.log('Computer is not enabled');
+        } else if (gameMode === 'computerVsComputer') {
+            console.log('Computer vs Computer: Triggering next computer move...');
+            window.setTimeout(makeComputerMove, 250);
         }
     } catch (error) {
         console.error('Error during move execution:', error);
@@ -254,9 +277,7 @@ function makeComputerMove() {
             
             if (!bestMoveResult || !bestMoveResult[1]) {
                 console.error('Computer failed to calculate a move');
-                alert('Computer encountered an error. Switching to human vs human mode.');
-                isComputerPlayer = false;
-                computerPlayButton.textContent = "Play vs Computer";
+                alert('Computer encountered an error. Please reset the game.');
                 return;
             }
             
@@ -265,9 +286,7 @@ function makeComputerMove() {
             
             if (!moveResult) {
                 console.error('Computer calculated an invalid move:', move);
-                alert('Computer calculated an invalid move. Switching to human vs human mode.');
-                isComputerPlayer = false;
-                computerPlayButton.textContent = "Play vs Computer";
+                alert('Computer calculated an invalid move. Please reset the game.');
                 return;
             }
             
@@ -284,15 +303,14 @@ function makeComputerMove() {
                 return;
             }
 
-            if (isComputerPlayer) {
+            // Continue computer moves in computer vs computer mode
+            if (gameMode === 'computerVsComputer') {
                 window.setTimeout(makeComputerMove, 250);
             }
         }, 10);
     } catch (error) {
         console.error('Error during computer move:', error);
-        alert('Computer encountered an error. Switching to human vs human mode.');
-        isComputerPlayer = false;
-        computerPlayButton.textContent = "Play vs Computer";
+        alert('Computer encountered an error. Please reset the game.');
         window.aiThinking = false;
     }
 }

@@ -121,6 +121,48 @@
             outline: none;
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.5);
         }
+
+        .game-mode-modal {
+            display: block;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            text-align: center;
+            opacity: 1;
+        }
+
+        .game-mode-modal h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .game-mode-modal button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 15px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .game-mode-modal button:hover {
+            background-color: #0056b3;
+        }
+
+        .game-mode-modal button:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.5);
+        }
     </style>
 </head>
 
@@ -139,13 +181,21 @@
             <option value="5">5</option>
         </select>
         <button id="resetButton">Reset the Game</button>
-        <button id="computerPlayButton">Play vs Computer</button>
+        <button id="computerPlayButton">Select Mode</button>
         <button id="undoButton">Undo</button>
     </div>
     <div class="overlay" id="overlay"></div>
     <div class="game-over-modal" id="gameOverModal">
         <p id="gameOverMessage"></p>
         <button onclick="closeGameOverModal()">Close</button>
+    </div>
+
+    <!-- Game Mode Selection Modal -->
+    <div class="overlay" id="gameModeOverlay" style="display: block;"></div>
+    <div class="game-mode-modal" id="gameModeModal">
+        <h2>Choose Game Mode</h2>
+        <button id="playerVsComputerBtn">Player vs Computer</button>
+        <button id="computerVsComputerBtn">Computer vs Computer</button>
     </div>
 
     <script src="./js/jquery-3.2.1.min.js"></script>
