@@ -71,11 +71,26 @@ function toggleComputerPlay() {
 
 // Undo last move
 function undoMove() {
-    game.undo();
-    board.position(game.fen());
-    if (isComputerPlayer) {
-        game.undo(); // Undo twice in computer vs computer mode
+    try {
+        const undoResult = game.undo();
+        if (!undoResult) {
+            console.log('No moves to undo');
+            return;
+        }
+        
         board.position(game.fen());
+        updateMoveIndicator();
+        
+        if (isComputerPlayer) {
+            const secondUndo = game.undo(); // Undo twice in computer vs computer mode
+            if (secondUndo) {
+                board.position(game.fen());
+                updateMoveIndicator();
+            }
+        }
+    } catch (error) {
+        console.error('Error during undo:', error);
+        alert('Unable to undo move. Please try again.');
     }
 }
 
@@ -134,7 +149,6 @@ function removeHighlights() {
 
 // Add this with the other DOM elements at the top of the file
 const moveIndicator = document.getElementById('moveIndicator');
-const aiCounter = document.getElementById('aiCounter');
 
 // Add this function to update the move indicator
 function updateMoveIndicator() {
@@ -146,55 +160,63 @@ function updateMoveIndicator() {
 
 // Modify the initGame function to include the initial move indicator update
 function initGame() {
-    board = ChessBoard('board', config);
-    addEventListeners();
-    updateMoveIndicator();
-    console.log("Game initialized");
+    try {
+        board = ChessBoard('board', config);
+        if (!board) {
+            throw new Error('Failed to initialize chessboard');
+        }
+        addEventListeners();
+        updateMoveIndicator();
+        console.log("Game initialized");
+    } catch (error) {
+        console.error('Failed to initialize game:', error);
+        alert('Failed to initialize the chess game. Please refresh the page.');
+    }
 }
 
 // Modify the resetGame function to update the move indicator
 function resetGame() {
-    console.log("Resetting game");
-    window.aiThinking = false;
-    game.reset();
-    board.position(game.fen());
-    isComputerPlayer = false;
-    computerPlayButton.textContent = "Computer v Computer";
-    closeGameOverModal();
-    updateMoveIndicator();
-    resetPositionsCounter();
-    aiCounter.textContent = "Positions evaluated: 0";
+    try {
+        console.log("Resetting game");
+        game.reset();
+        board.position(game.fen());
+        isComputerPlayer = false;
+        computerPlayButton.textContent = "Computer v Computer";
+        closeGameOverModal();
+        updateMoveIndicator();
+    } catch (error) {
+        console.error('Error resetting game:', error);
+        alert('Error resetting the game. Please refresh the page.');
+    }
 }
 
 // Modify the onDrop function to update the move indicator after a move
 function onDrop(source, target) {
     removeHighlights();
-    var move = game.move({
-        from: source,
-        to: target,
-        promotion: 'q' // Always promote to queen for simplicity
-    });
+    
+    try {
+        var move = game.move({
+            from: source,
+            to: target,
+            promotion: 'q' // Always promote to queen for simplicity
+        });
 
-    if (move === null) return 'snapback';
+        if (move === null) return 'snapback';
 
-    updateMoveIndicator();
+        updateMoveIndicator();
 
-    // Check for game over after player's move
-    if (checkGameOver()) {
-        return;
-    }
+        // Check for game over after player's move
+        if (checkGameOver()) {
+            return;
+        }
 
-    if (isComputerPlayer) {
-        window.setTimeout(makeComputerMove, 250);
-    }
-}
-
-// Function to update the counter display while thinking
-function updateCounterDisplay() {
-    if (window.aiThinking) {
-        const count = getPositionsEvaluated();
-        aiCounter.textContent = `Thinking... Positions evaluated: ${count.toLocaleString()}`;
-        setTimeout(updateCounterDisplay, 100); // Update every 100ms
+        if (isComputerPlayer) {
+            window.setTimeout(makeComputerMove, 250);
+        }
+    } catch (error) {
+        console.error('Error during move execution:', error);
+        alert('Invalid move. Please try again.');
+        return 'snapback';
     }
 }
 
@@ -202,28 +224,35 @@ function updateCounterDisplay() {
 function makeComputerMove() {
     if (game.game_over()) return;
 
-    console.log("Computer is thinking...");
-    resetPositionsCounter();
-    window.aiThinking = true;
-    aiCounter.textContent = "Computer is thinking...";
-    
-    // Start updating the counter display
-    setTimeout(updateCounterDisplay, 100);
-    
-    // Use setTimeout to allow UI updates during calculation
-    setTimeout(() => {
+    try {
+        console.log("Computer is thinking...");
         var start = new Date().getTime();
-        var move = calcBestMove(skill, game, game.turn())[1];
-        window.aiThinking = false;
+        var bestMoveResult = calcBestMove(skill, game, game.turn());
         
-        game.move(move);
+        if (!bestMoveResult || !bestMoveResult[1]) {
+            console.error('Computer failed to calculate a move');
+            alert('Computer encountered an error. Game will continue without computer moves.');
+            isComputerPlayer = false;
+            computerPlayButton.textContent = "Computer v Computer";
+            return;
+        }
+        
+        var move = bestMoveResult[1];
+        var moveResult = game.move(move);
+        
+        if (!moveResult) {
+            console.error('Computer calculated an invalid move:', move);
+            alert('Computer calculated an invalid move. Game will continue without computer moves.');
+            isComputerPlayer = false;
+            computerPlayButton.textContent = "Computer v Computer";
+            return;
+        }
+        
         board.position(game.fen());
         updateMoveIndicator();
 
         var end = new Date().getTime();
-        var positionsCount = getPositionsEvaluated();
-        aiCounter.textContent = `Positions evaluated: ${positionsCount.toLocaleString()}`;
-        console.log(`Computer moved ${move.from}-${move.to} in ${end - start}ms, evaluated ${positionsCount} positions`);
+        console.log(`Computer moved ${move.from}-${move.to} in ${end - start}ms`);
 
         // Check for game over after computer's move
         if (checkGameOver()) {
@@ -233,7 +262,12 @@ function makeComputerMove() {
         if (isComputerPlayer) {
             window.setTimeout(makeComputerMove, 250);
         }
-    }, 10);
+    } catch (error) {
+        console.error('Error during computer move:', error);
+        alert('Computer encountered an error. Game will continue without computer moves.');
+        isComputerPlayer = false;
+        computerPlayButton.textContent = "Computer v Computer";
+    }
 }
 
 // Modify the checkGameOver function to update the move indicator when the game ends

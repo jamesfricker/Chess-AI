@@ -1,9 +1,6 @@
 // Transposition table
 const transpositionTable = new Map();
 
-// Move counter for AI analysis
-let positionsEvaluated = 0;
-
 // Constants
 const INFINITY = 1000000;
 const MAX_QUIESCENCE_DEPTH = 5;
@@ -89,18 +86,33 @@ const pst = {
  * @return {Number} board value relative to player
  */
 function evaluateBoard(board, color) {
-    let value = 0;
-    for (let i = 0; i < 8; i++) {
-        for (let j = 0; j < 8; j++) {
-            const piece = board[i][j];
-            if (piece) {
-                const pieceIndex = i * 8 + j;
-                const positionValue = pst[piece.type][color === 'w' ? pieceIndex : 63 - pieceIndex];
-                value += (pieceValue[piece.type] + positionValue) * (piece.color === color ? 1 : -1);
+    try {
+        if (!board || !color) {
+            console.error('Invalid board or color in evaluateBoard');
+            return 0;
+        }
+        
+        let value = 0;
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                const piece = board[i][j];
+                if (piece && piece.type && piece.color) {
+                    const pieceIndex = i * 8 + j;
+                    const pieceTypeValue = pieceValue[piece.type];
+                    const positionTable = pst[piece.type];
+                    
+                    if (pieceTypeValue && positionTable && pieceIndex >= 0 && pieceIndex < 64) {
+                        const positionValue = positionTable[color === 'w' ? pieceIndex : 63 - pieceIndex];
+                        value += (pieceTypeValue + (positionValue || 0)) * (piece.color === color ? 1 : -1);
+                    }
+                }
             }
         }
+        return value;
+    } catch (error) {
+        console.error('Error in evaluateBoard:', error);
+        return 0;
     }
-    return value;
 }
 
 /**
@@ -144,61 +156,80 @@ function getMoveScore(move, game, playerColor) {
  * @return {Array} The best move value, and the best move
  */
 function calcBestMove(depth, game, playerColor, alpha = -INFINITY, beta = INFINITY, isMaximizingPlayer = true) {
-    positionsEvaluated++;
-    
-    const fen = game.fen();
-    const ttEntry = transpositionTable.get(fen);
-    if (ttEntry && ttEntry.depth >= depth) {
-        return [ttEntry.value, ttEntry.bestMove];
-    }
-
-    if (depth === 0) {
-        return [evaluateBoard(game.board(), playerColor), null];
-    }
-
-    let bestMove = null;
-    let bestMoveValue = isMaximizingPlayer ? -INFINITY : INFINITY;
-
-    const possibleMoves = orderMoves(game.moves({ verbose: true }), game, playerColor);
-
-    for (const move of possibleMoves) {
-        game.move(move);
-
-        let value;
-        if (depth === 1 && move.captured) {
-            value = -Quiesce(-beta, -alpha, 0, game, playerColor);
-        } else {
-            value = calcBestMove(depth - 1, game, playerColor, alpha, beta, !isMaximizingPlayer)[0];
+    try {
+        const fen = game.fen();
+        const ttEntry = transpositionTable.get(fen);
+        if (ttEntry && ttEntry.depth >= depth) {
+            return [ttEntry.value, ttEntry.bestMove];
         }
 
-        game.undo();
-
-        if (game.in_checkmate()) {
-            value = isMaximizingPlayer ? INFINITY : -INFINITY;
+        if (depth === 0) {
+            return [evaluateBoard(game.board(), playerColor), null];
         }
 
-        if (isMaximizingPlayer) {
-            if (value > bestMoveValue) {
-                bestMoveValue = value;
-                bestMove = move;
+        let bestMove = null;
+        let bestMoveValue = isMaximizingPlayer ? -INFINITY : INFINITY;
+
+        const possibleMoves = orderMoves(game.moves({ verbose: true }), game, playerColor);
+        
+        if (possibleMoves.length === 0) {
+            console.error('No possible moves available');
+            return [bestMoveValue, null];
+        }
+
+        for (const move of possibleMoves) {
+            try {
+                game.move(move);
+
+                let value;
+                if (depth === 1 && move.captured) {
+                    value = -Quiesce(-beta, -alpha, 0, game, playerColor);
+                } else {
+                    const result = calcBestMove(depth - 1, game, playerColor, alpha, beta, !isMaximizingPlayer);
+                    if (!result) {
+                        game.undo();
+                        continue;
+                    }
+                    value = result[0];
+                }
+
+                game.undo();
+
+                if (game.in_checkmate()) {
+                    value = isMaximizingPlayer ? INFINITY : -INFINITY;
+                }
+
+                if (isMaximizingPlayer) {
+                    if (value > bestMoveValue) {
+                        bestMoveValue = value;
+                        bestMove = move;
+                    }
+                    alpha = Math.max(alpha, value);
+                } else {
+                    if (value < bestMoveValue) {
+                        bestMoveValue = value;
+                        bestMove = move;
+                    }
+                    beta = Math.min(beta, value);
+                }
+
+                if (beta <= alpha) {
+                    break;
+                }
+            } catch (moveError) {
+                console.error('Error processing move:', move, moveError);
+                continue;
             }
-            alpha = Math.max(alpha, value);
-        } else {
-            if (value < bestMoveValue) {
-                bestMoveValue = value;
-                bestMove = move;
-            }
-            beta = Math.min(beta, value);
         }
 
-        if (beta <= alpha) {
-            break;
-        }
+        transpositionTable.set(fen, { depth, value: bestMoveValue, bestMove });
+
+        return [bestMoveValue, bestMove || possibleMoves[0]];
+    } catch (error) {
+        console.error('Error in calcBestMove:', error);
+        const fallbackMoves = game.moves({ verbose: true });
+        return [0, fallbackMoves.length > 0 ? fallbackMoves[0] : null];
     }
-
-    transpositionTable.set(fen, { depth, value: bestMoveValue, bestMove });
-
-    return [bestMoveValue, bestMove || possibleMoves[0]];
 }
 
 /**
@@ -211,44 +242,52 @@ function calcBestMove(depth, game, playerColor, alpha = -INFINITY, beta = INFINI
  * @return {Number} Evaluation after quiescence search
  */
 function Quiesce(alpha, beta, depth, game, playerColor) {
-    positionsEvaluated++;
-    
-    const standPat = evaluateBoard(game.board(), playerColor);
+    try {
+        const standPat = evaluateBoard(game.board(), playerColor);
 
-    if (depth === MAX_QUIESCENCE_DEPTH) {
-        return standPat;
-    }
-
-    if (standPat >= beta) {
-        return beta;
-    }
-    if (alpha < standPat) {
-        alpha = standPat;
-    }
-
-    const captureMoves = game.moves({ verbose: true }).filter(move => move.captured);
-
-    for (const move of captureMoves) {
-        game.move(move);
-
-        let score;
-        if (game.in_checkmate()) {
-            score = INFINITY;
-        } else {
-            score = -Quiesce(-beta, -alpha, depth + 1, game, playerColor);
+        if (depth === MAX_QUIESCENCE_DEPTH) {
+            return standPat;
         }
 
-        game.undo();
-
-        if (score >= beta) {
+        if (standPat >= beta) {
             return beta;
         }
-        if (score > alpha) {
-            alpha = score;
+        if (alpha < standPat) {
+            alpha = standPat;
         }
-    }
 
-    return alpha;
+        const captureMoves = game.moves({ verbose: true }).filter(move => move.captured);
+
+        for (const move of captureMoves) {
+            try {
+                game.move(move);
+
+                let score;
+                if (game.in_checkmate()) {
+                    score = INFINITY;
+                } else {
+                    score = -Quiesce(-beta, -alpha, depth + 1, game, playerColor);
+                }
+
+                game.undo();
+
+                if (score >= beta) {
+                    return beta;
+                }
+                if (score > alpha) {
+                    alpha = score;
+                }
+            } catch (moveError) {
+                console.error('Error in Quiesce move processing:', move, moveError);
+                continue;
+            }
+        }
+
+        return alpha;
+    } catch (error) {
+        console.error('Error in Quiesce:', error);
+        return evaluateBoard(game.board(), playerColor);
+    }
 }
 
 /**
@@ -284,18 +323,4 @@ function iterativeDeepening(game, maxDepth) {
  */
 function clearTranspositionTable() {
     transpositionTable.clear();
-}
-
-/**
- * Resets the positions evaluated counter
- */
-function resetPositionsCounter() {
-    positionsEvaluated = 0;
-}
-
-/**
- * Gets the current positions evaluated count
- */
-function getPositionsEvaluated() {
-    return positionsEvaluated;
 }
