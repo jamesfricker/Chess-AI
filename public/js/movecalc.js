@@ -269,9 +269,41 @@ function Quiesce(alpha, beta, depth, game, playerColor) {
             alpha = standPat;
         }
 
-        const captureMoves = game.moves({ verbose: true }).filter(move => move.captured);
+        // Filter for tactically significant moves: captures, promotions, and checks
+        const allMoves = game.moves({ verbose: true });
+        const tacticalMoves = [];
+        
+        for (const move of allMoves) {
+            // Always include captures and promotions
+            if (move.captured || move.promotion) {
+                tacticalMoves.push(move);
+                continue;
+            }
+            
+            // Check if the move gives check (only for non-captures/promotions to avoid duplicates)
+            try {
+                game.move(move);
+                const givesCheck = game.in_check();
+                game.undo();
+                
+                if (givesCheck) {
+                    tacticalMoves.push(move);
+                }
+            } catch (error) {
+                // If there's an error, skip this move
+                continue;
+            }
+        }
 
-        for (const move of captureMoves) {
+        // Log tactical moves found (only at shallow depths to avoid spam)
+        if (depth <= 2 && tacticalMoves.length > 0) {
+            const captures = tacticalMoves.filter(m => m.captured).length;
+            const promotions = tacticalMoves.filter(m => m.promotion).length;
+            const checks = tacticalMoves.filter(m => !m.captured && !m.promotion).length;
+            console.log(`Quiesce depth ${depth}: Found ${tacticalMoves.length} tactical moves (${captures} captures, ${promotions} promotions, ${checks} checks)`);
+        }
+
+        for (const move of tacticalMoves) {
             try {
                 game.move(move);
 
