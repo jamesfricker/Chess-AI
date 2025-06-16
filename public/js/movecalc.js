@@ -1,6 +1,9 @@
 // Transposition table
 const transpositionTable = new Map();
 
+// Move counter for AI analysis
+let positionsEvaluated = 0;
+
 // Constants
 const INFINITY = 1000000;
 const MAX_QUIESCENCE_DEPTH = 5;
@@ -157,6 +160,8 @@ function getMoveScore(move, game, playerColor) {
  */
 function calcBestMove(depth, game, playerColor, alpha = -INFINITY, beta = INFINITY, isMaximizingPlayer = true) {
     try {
+        positionsEvaluated++;
+        
         const fen = game.fen();
         const ttEntry = transpositionTable.get(fen);
         if (ttEntry && ttEntry.depth >= depth) {
@@ -243,6 +248,8 @@ function calcBestMove(depth, game, playerColor, alpha = -INFINITY, beta = INFINI
  */
 function Quiesce(alpha, beta, depth, game, playerColor) {
     try {
+        positionsEvaluated++;
+        
         const standPat = evaluateBoard(game.board(), playerColor);
 
         if (depth === MAX_QUIESCENCE_DEPTH) {
@@ -323,4 +330,18 @@ function iterativeDeepening(game, maxDepth) {
  */
 function clearTranspositionTable() {
     transpositionTable.clear();
+}
+
+/**
+ * Resets the positions evaluated counter
+ */
+function resetPositionsCounter() {
+    positionsEvaluated = 0;
+}
+
+/**
+ * Gets the current positions evaluated count
+ */
+function getPositionsEvaluated() {
+    return positionsEvaluated;
 }

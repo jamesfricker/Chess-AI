@@ -63,9 +63,22 @@ function setDifficulty() {
 // Toggle computer play
 function toggleComputerPlay() {
     isComputerPlayer = !isComputerPlayer;
-    computerPlayButton.textContent = isComputerPlayer ? "Stop Computer" : "Computer v Computer";
-    if (isComputerPlayer && !checkGameOver()) {
-        makeComputerMove();
+    console.log(`Computer play toggled. isComputerPlayer: ${isComputerPlayer}, current turn: ${game.turn()}`);
+    
+    if (isComputerPlayer) {
+        computerPlayButton.textContent = "Stop Computer";
+        console.log('Computer enabled - button shows "Stop Computer"');
+        // If it's black's turn when enabling computer, make computer move
+        if (game.turn() === 'b' && !checkGameOver()) {
+            console.log('It is black\'s turn, triggering immediate computer move');
+            window.setTimeout(makeComputerMove, 250);
+        } else {
+            console.log('It is white\'s turn, waiting for player move');
+        }
+    } else {
+        computerPlayButton.textContent = "Play vs Computer";
+        console.log('Computer disabled - button shows "Play vs Computer"');
+        window.aiThinking = false;
     }
 }
 
@@ -103,26 +116,6 @@ function onDragStart(source, piece, position, orientation) {
     highlightLegalMoves(source);
 }
 
-// Handle piece drop
-function onDrop(source, target) {
-    removeHighlights();
-    var move = game.move({
-        from: source,
-        to: target,
-        promotion: 'q' // Always promote to queen for simplicity
-    });
-
-    if (move === null) return 'snapback';
-
-    // Check for game over after player's move
-    if (checkGameOver()) {
-        return;
-    }
-
-    if (isComputerPlayer) {
-        window.setTimeout(makeComputerMove, 250);
-    }
-}
 
 // Update the board position after the piece snap animation
 function onSnapEnd() {
@@ -149,6 +142,7 @@ function removeHighlights() {
 
 // Add this with the other DOM elements at the top of the file
 const moveIndicator = document.getElementById('moveIndicator');
+const aiCounter = document.getElementById('aiCounter');
 
 // Add this function to update the move indicator
 function updateMoveIndicator() {
@@ -167,6 +161,8 @@ function initGame() {
         }
         addEventListeners();
         updateMoveIndicator();
+        resetPositionsCounter();
+        aiCounter.textContent = "Positions evaluated: 0";
         console.log("Game initialized");
     } catch (error) {
         console.error('Failed to initialize game:', error);
@@ -178,19 +174,22 @@ function initGame() {
 function resetGame() {
     try {
         console.log("Resetting game");
+        window.aiThinking = false;
         game.reset();
         board.position(game.fen());
         isComputerPlayer = false;
-        computerPlayButton.textContent = "Computer v Computer";
+        computerPlayButton.textContent = "Play vs Computer";
         closeGameOverModal();
         updateMoveIndicator();
+        resetPositionsCounter();
+        aiCounter.textContent = "Positions evaluated: 0";
     } catch (error) {
         console.error('Error resetting game:', error);
         alert('Error resetting the game. Please refresh the page.');
     }
 }
 
-// Modify the onDrop function to update the move indicator after a move
+// Handle piece drop
 function onDrop(source, target) {
     removeHighlights();
     
@@ -204,19 +203,33 @@ function onDrop(source, target) {
         if (move === null) return 'snapback';
 
         updateMoveIndicator();
+        console.log(`Player moved ${move.from}-${move.to}, isComputerPlayer: ${isComputerPlayer}, current turn: ${game.turn()}`);
 
         // Check for game over after player's move
         if (checkGameOver()) {
             return;
         }
 
+        // Trigger computer move if computer is enabled
         if (isComputerPlayer) {
+            console.log('Triggering computer move...');
             window.setTimeout(makeComputerMove, 250);
+        } else {
+            console.log('Computer is not enabled');
         }
     } catch (error) {
         console.error('Error during move execution:', error);
         alert('Invalid move. Please try again.');
         return 'snapback';
+    }
+}
+
+// Function to update the counter display while thinking
+function updateCounterDisplay() {
+    if (window.aiThinking) {
+        const count = getPositionsEvaluated();
+        aiCounter.textContent = `Thinking... Positions evaluated: ${count.toLocaleString()}`;
+        setTimeout(updateCounterDisplay, 100); // Update every 100ms
     }
 }
 
@@ -226,47 +239,61 @@ function makeComputerMove() {
 
     try {
         console.log("Computer is thinking...");
-        var start = new Date().getTime();
-        var bestMoveResult = calcBestMove(skill, game, game.turn());
+        resetPositionsCounter();
+        window.aiThinking = true;
+        aiCounter.textContent = "Computer is thinking...";
         
-        if (!bestMoveResult || !bestMoveResult[1]) {
-            console.error('Computer failed to calculate a move');
-            alert('Computer encountered an error. Game will continue without computer moves.');
-            isComputerPlayer = false;
-            computerPlayButton.textContent = "Computer v Computer";
-            return;
-        }
+        // Start updating the counter display
+        setTimeout(updateCounterDisplay, 100);
         
-        var move = bestMoveResult[1];
-        var moveResult = game.move(move);
-        
-        if (!moveResult) {
-            console.error('Computer calculated an invalid move:', move);
-            alert('Computer calculated an invalid move. Game will continue without computer moves.');
-            isComputerPlayer = false;
-            computerPlayButton.textContent = "Computer v Computer";
-            return;
-        }
-        
-        board.position(game.fen());
-        updateMoveIndicator();
+        // Use setTimeout to allow UI updates during calculation
+        setTimeout(() => {
+            var start = new Date().getTime();
+            var bestMoveResult = calcBestMove(skill, game, game.turn());
+            window.aiThinking = false;
+            
+            if (!bestMoveResult || !bestMoveResult[1]) {
+                console.error('Computer failed to calculate a move');
+                alert('Computer encountered an error. Switching to human vs human mode.');
+                isComputerPlayer = false;
+                computerPlayButton.textContent = "Play vs Computer";
+                return;
+            }
+            
+            var move = bestMoveResult[1];
+            var moveResult = game.move(move);
+            
+            if (!moveResult) {
+                console.error('Computer calculated an invalid move:', move);
+                alert('Computer calculated an invalid move. Switching to human vs human mode.');
+                isComputerPlayer = false;
+                computerPlayButton.textContent = "Play vs Computer";
+                return;
+            }
+            
+            board.position(game.fen());
+            updateMoveIndicator();
 
-        var end = new Date().getTime();
-        console.log(`Computer moved ${move.from}-${move.to} in ${end - start}ms`);
+            var end = new Date().getTime();
+            var positionsCount = getPositionsEvaluated();
+            aiCounter.textContent = `Positions evaluated: ${positionsCount.toLocaleString()}`;
+            console.log(`Computer moved ${move.from}-${move.to} in ${end - start}ms, evaluated ${positionsCount} positions`);
 
-        // Check for game over after computer's move
-        if (checkGameOver()) {
-            return;
-        }
+            // Check for game over after computer's move
+            if (checkGameOver()) {
+                return;
+            }
 
-        if (isComputerPlayer) {
-            window.setTimeout(makeComputerMove, 250);
-        }
+            if (isComputerPlayer) {
+                window.setTimeout(makeComputerMove, 250);
+            }
+        }, 10);
     } catch (error) {
         console.error('Error during computer move:', error);
-        alert('Computer encountered an error. Game will continue without computer moves.');
+        alert('Computer encountered an error. Switching to human vs human mode.');
         isComputerPlayer = false;
-        computerPlayButton.textContent = "Computer v Computer";
+        computerPlayButton.textContent = "Play vs Computer";
+        window.aiThinking = false;
     }
 }
 
