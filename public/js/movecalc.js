@@ -148,9 +148,23 @@ function orderMoves(moves, game, playerColor) {
  */
 function getMoveScore(move, game, playerColor) {
     let score = 0;
-    if (move.captured) score += 10 * pieceValue[move.captured];
-    if (move.promotion) score += pieceValue[move.promotion] - pieceValue['p'];
-    if (game.in_check()) score += 50;
+    
+    if (move.captured) {
+        score += 10 * pieceValue[move.captured] - pieceValue[move.piece];
+    }
+    
+    if (move.promotion) {
+        score += pieceValue[move.promotion] - pieceValue['p'];
+    }
+    
+    game.move(move);
+    const givesCheck = game.in_check();
+    game.undo();
+    
+    if (givesCheck) {
+        score += 50;
+    }
+    
     return score;
 }
 
@@ -174,8 +188,8 @@ function calcBestMove(depth, game, playerColor, alpha = -INFINITY, beta = INFINI
             return [ttEntry.value, ttEntry.bestMove];
         }
 
-        if (depth === 0) {
-            return [evaluateBoard(game.board(), playerColor), null];
+        if (depth <= 0) {
+            return [Quiesce(alpha, beta, 0, game, playerColor), null];
         }
 
         let bestMove = null;
@@ -183,9 +197,23 @@ function calcBestMove(depth, game, playerColor, alpha = -INFINITY, beta = INFINI
 
         const possibleMoves = orderMoves(game.moves({ verbose: true }), game, playerColor);
         
+        // Handle terminal states when no moves are available
         if (possibleMoves.length === 0) {
-            console.error('No possible moves available');
-            return [bestMoveValue, null];
+            if (game.in_checkmate()) {
+                // Current player is in checkmate - bad for them, good for opponent
+                // If we're maximizing and current player is in checkmate, it's bad for us
+                // If we're minimizing and current player is in checkmate, it's good for us
+                const checkmateValue = isMaximizingPlayer ? -INFINITY + depth : INFINITY - depth;
+                console.log(`Terminal checkmate detected at depth ${depth}, value: ${checkmateValue}`);
+                return [checkmateValue, null];
+            } else if (game.in_stalemate() || game.in_draw() || game.in_threefold_repetition() || game.insufficient_material()) {
+                // Any draw condition
+                console.log(`Terminal draw detected at depth ${depth}`);
+                return [0, null];
+            } else {
+                console.error('No possible moves available but not checkmate or stalemate');
+                return [0, null]; // Treat as draw if unclear
+            }
         }
 
         for (const move of possibleMoves) {
@@ -195,10 +223,13 @@ function calcBestMove(depth, game, playerColor, alpha = -INFINITY, beta = INFINI
                 let value;
                 // Check for checkmate immediately after making the move
                 if (game.in_checkmate()) {
-                    value = isMaximizingPlayer ? INFINITY : -INFINITY;
+                    // The player whose turn it is now (after our move) is checkmated
+                    // This is good for us if we're maximizing, bad if we're minimizing
+                    value = isMaximizingPlayer ? INFINITY - depth : -INFINITY + depth;
                     console.log(`Checkmate detected! Move ${move.from}-${move.to} leads to checkmate. Value: ${value} (isMaximizingPlayer: ${isMaximizingPlayer})`);
-                } else if (depth === 1 && move.captured) {
-                    value = -Quiesce(-beta, -alpha, 0, game, playerColor);
+                } else if (game.in_stalemate()) {
+                    // Stalemate is always a draw (0)
+                    value = 0;
                 } else {
                     const result = calcBestMove(depth - 1, game, playerColor, alpha, beta, !isMaximizingPlayer);
                     if (!result) {
@@ -271,27 +302,29 @@ function Quiesce(alpha, beta, depth, game, playerColor) {
 
         // Filter for tactically significant moves: captures, promotions, and checks
         const allMoves = game.moves({ verbose: true });
-        const tacticalMoves = [];
         
+        // Handle terminal states in quiescence search
+        if (allMoves.length === 0) {
+            if (game.in_checkmate()) {
+                // Checkmate in quiescence - return a very high/low value
+                return INFINITY - depth;
+            } else if (game.in_stalemate() || game.in_draw() || game.in_threefold_repetition() || game.insufficient_material()) {
+                // Draw conditions
+                return 0;
+            }
+        }
+        
+        const tacticalMoves = [];
+
         for (const move of allMoves) {
-            // Always include captures and promotions
             if (move.captured || move.promotion) {
+                // Include all captures and promotions
                 tacticalMoves.push(move);
                 continue;
             }
-            
-            // Check if the move gives check (only for non-captures/promotions to avoid duplicates)
-            try {
-                game.move(move);
-                const givesCheck = game.in_check();
-                game.undo();
-                
-                if (givesCheck) {
-                    tacticalMoves.push(move);
-                }
-            } catch (error) {
-                // If there's an error, skip this move
-                continue;
+            if (move.flags && (move.flags.includes('k') || move.flags.includes('q'))) {
+                // Include castling
+                tacticalMoves.push(move);
             }
         }
 
@@ -299,8 +332,8 @@ function Quiesce(alpha, beta, depth, game, playerColor) {
         if (depth <= 2 && tacticalMoves.length > 0) {
             const captures = tacticalMoves.filter(m => m.captured).length;
             const promotions = tacticalMoves.filter(m => m.promotion).length;
-            const checks = tacticalMoves.filter(m => !m.captured && !m.promotion).length;
-            console.log(`Quiesce depth ${depth}: Found ${tacticalMoves.length} tactical moves (${captures} captures, ${promotions} promotions, ${checks} checks)`);
+            const castles = tacticalMoves.filter(m => m.flags && (m.flags.includes('k') || m.flags.includes('q'))).length;
+            console.log(`Quiesce depth ${depth}: Found ${tacticalMoves.length} tactical moves (${captures} captures, ${promotions} promotions, ${castles} castles)`);
         }
 
         for (const move of tacticalMoves) {
@@ -309,8 +342,12 @@ function Quiesce(alpha, beta, depth, game, playerColor) {
 
                 let score;
                 if (game.in_checkmate()) {
-                    score = INFINITY;
+                    // Checkmate in quiescence search - this is very good for us
+                    score = INFINITY - depth;
                     console.log(`Quiesce: Checkmate detected! Move ${move.from}-${move.to} leads to checkmate in quiescence search.`);
+                } else if (game.in_stalemate()) {
+                    // Stalemate is a draw
+                    score = 0;
                 } else {
                     score = -Quiesce(-beta, -alpha, depth + 1, game, playerColor);
                 }
@@ -347,6 +384,9 @@ function iterativeDeepening(game, maxDepth) {
     let bestMove;
     let bestMoveValue = -INFINITY;
     let actualDepthReached = 0;
+    
+    // Store the AI's color - this stays constant throughout search
+    const aiColor = game.turn();
 
     // Get a fallback move in case of issues
     const possibleMoves = game.moves({ verbose: true });
@@ -357,10 +397,12 @@ function iterativeDeepening(game, maxDepth) {
 
     for (let depth = 1; depth <= maxDepth; depth++) {
         try {
-            const [moveValue, move] = calcBestMove(depth, game, game.turn());
+            // Use consistent AI color, not current turn
+            const [moveValue, move] = calcBestMove(depth, game, aiColor);
             actualDepthReached = depth;
 
-            if (moveValue > bestMoveValue || !bestMove) {
+            // Only update if we have a better move or no move yet
+            if (!bestMove || (moveValue > bestMoveValue && move)) {
                 bestMoveValue = moveValue;
                 bestMove = move;
             }
@@ -368,7 +410,7 @@ function iterativeDeepening(game, maxDepth) {
             console.log(`Iterative deepening: depth ${depth}, best move: ${move ? move.from + '-' + move.to : 'none'}, eval: ${moveValue}`);
 
             // If we've found a winning move, no need to search deeper
-            if (moveValue === INFINITY) {
+            if (moveValue >= INFINITY - 100) {
                 console.log(`Found winning move at depth ${depth}, stopping search early`);
                 break;
             }
