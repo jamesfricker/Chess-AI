@@ -334,16 +334,14 @@ function makeComputerMove() {
         // Use setTimeout to allow UI updates during calculation
         setTimeout(() => {
             var start = new Date().getTime();
-            var bestMoveResult = calcBestMove(skill, game, game.turn());
+            var move = iterativeDeepening(game, skill);
             window.aiThinking = false;
             
-            if (!bestMoveResult || !bestMoveResult[1]) {
+            if (!move) {
                 console.error('Computer failed to calculate a move');
                 alert('Computer encountered an error. Please reset the game.');
                 return;
             }
-            
-            var move = bestMoveResult[1];
             var moveResult = game.move(move);
             
             if (!moveResult) {
@@ -362,7 +360,7 @@ function makeComputerMove() {
             var end = new Date().getTime();
             var positionsCount = getPositionsEvaluated();
             aiCounter.textContent = `Positions evaluated: ${positionsCount.toLocaleString()}`;
-            console.log(`Computer moved ${move.from}-${move.to} in ${end - start}ms, evaluated ${positionsCount} positions`);
+            console.log(`Computer moved ${move.from}-${move.to} in ${end - start}ms, evaluated ${positionsCount} positions using iterative deepening (max depth: ${skill})`);
 
             // Check for game over after computer's move
             if (checkGameOver()) {

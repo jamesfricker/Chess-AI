@@ -307,21 +307,45 @@ function iterativeDeepening(game, maxDepth) {
     transpositionTable.clear();
     let bestMove;
     let bestMoveValue = -INFINITY;
+    let actualDepthReached = 0;
+
+    // Get a fallback move in case of issues
+    const possibleMoves = game.moves({ verbose: true });
+    if (possibleMoves.length === 0) {
+        console.error('No legal moves available in iterativeDeepening');
+        return null;
+    }
 
     for (let depth = 1; depth <= maxDepth; depth++) {
-        const [moveValue, move] = calcBestMove(depth, game, game.turn());
+        try {
+            const [moveValue, move] = calcBestMove(depth, game, game.turn());
+            actualDepthReached = depth;
 
-        if (moveValue > bestMoveValue || !bestMove) {
-            bestMoveValue = moveValue;
-            bestMove = move;
-        }
+            if (moveValue > bestMoveValue || !bestMove) {
+                bestMoveValue = moveValue;
+                bestMove = move;
+            }
 
-        // If we've found a winning move, no need to search deeper
-        if (moveValue === INFINITY) {
+            console.log(`Iterative deepening: depth ${depth}, best move: ${move ? move.from + '-' + move.to : 'none'}, eval: ${moveValue}`);
+
+            // If we've found a winning move, no need to search deeper
+            if (moveValue === INFINITY) {
+                console.log(`Found winning move at depth ${depth}, stopping search early`);
+                break;
+            }
+        } catch (error) {
+            console.error(`Error at depth ${depth}:`, error);
             break;
         }
     }
 
+    // Ensure we always return a valid move
+    if (!bestMove) {
+        console.warn('No best move found, using fallback');
+        bestMove = possibleMoves[0];
+    }
+
+    console.log(`Iterative deepening completed: reached depth ${actualDepthReached}/${maxDepth}, best move: ${bestMove ? bestMove.from + '-' + bestMove.to : 'none'}`);
     return bestMove;
 }
 
