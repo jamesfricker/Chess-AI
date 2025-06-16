@@ -134,6 +134,7 @@ function removeHighlights() {
 
 // Add this with the other DOM elements at the top of the file
 const moveIndicator = document.getElementById('moveIndicator');
+const aiCounter = document.getElementById('aiCounter');
 
 // Add this function to update the move indicator
 function updateMoveIndicator() {
@@ -154,11 +155,15 @@ function initGame() {
 // Modify the resetGame function to update the move indicator
 function resetGame() {
     console.log("Resetting game");
+    window.aiThinking = false;
     game.reset();
     board.position(game.fen());
     isComputerPlayer = false;
+    computerPlayButton.textContent = "Computer v Computer";
     closeGameOverModal();
     updateMoveIndicator();
+    resetPositionsCounter();
+    aiCounter.textContent = "Positions evaluated: 0";
 }
 
 // Modify the onDrop function to update the move indicator after a move
@@ -184,28 +189,51 @@ function onDrop(source, target) {
     }
 }
 
+// Function to update the counter display while thinking
+function updateCounterDisplay() {
+    if (window.aiThinking) {
+        const count = getPositionsEvaluated();
+        aiCounter.textContent = `Thinking... Positions evaluated: ${count.toLocaleString()}`;
+        setTimeout(updateCounterDisplay, 100); // Update every 100ms
+    }
+}
+
 // Modify the makeComputerMove function to update the move indicator after the computer's move
 function makeComputerMove() {
     if (game.game_over()) return;
 
     console.log("Computer is thinking...");
-    var start = new Date().getTime();
-    var move = calcBestMove(skill, game, game.turn())[1];
-    game.move(move);
-    board.position(game.fen());
-    updateMoveIndicator();
+    resetPositionsCounter();
+    window.aiThinking = true;
+    aiCounter.textContent = "Computer is thinking...";
+    
+    // Start updating the counter display
+    setTimeout(updateCounterDisplay, 100);
+    
+    // Use setTimeout to allow UI updates during calculation
+    setTimeout(() => {
+        var start = new Date().getTime();
+        var move = calcBestMove(skill, game, game.turn())[1];
+        window.aiThinking = false;
+        
+        game.move(move);
+        board.position(game.fen());
+        updateMoveIndicator();
 
-    var end = new Date().getTime();
-    console.log(`Computer moved ${move.from}-${move.to} in ${end - start}ms`);
+        var end = new Date().getTime();
+        var positionsCount = getPositionsEvaluated();
+        aiCounter.textContent = `Positions evaluated: ${positionsCount.toLocaleString()}`;
+        console.log(`Computer moved ${move.from}-${move.to} in ${end - start}ms, evaluated ${positionsCount} positions`);
 
-    // Check for game over after computer's move
-    if (checkGameOver()) {
-        return;
-    }
+        // Check for game over after computer's move
+        if (checkGameOver()) {
+            return;
+        }
 
-    if (isComputerPlayer) {
-        window.setTimeout(makeComputerMove, 250);
-    }
+        if (isComputerPlayer) {
+            window.setTimeout(makeComputerMove, 250);
+        }
+    }, 10);
 }
 
 // Modify the checkGameOver function to update the move indicator when the game ends
