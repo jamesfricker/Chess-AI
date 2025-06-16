@@ -171,6 +171,21 @@
     <!-- Add this right after the <div id="board"></div> -->
     <div id="moveIndicator" class="move-indicator" aria-live="polite"></div>
     <div id="aiCounter" class="ai-counter" style="margin: 10px 0; font-size: 14px; color: #666;">Positions evaluated: 0</div>
+    
+    <!-- Evaluation Display -->
+    <div id="evaluationContainer" style="margin: 15px 0; text-align: center;">
+        <div id="evaluationText" style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">Evaluation: Even</div>
+        <div id="evaluationBar" style="width: 300px; height: 20px; border: 2px solid #333; border-radius: 10px; margin: 0 auto; position: relative; background: linear-gradient(to right, #000 0%, #000 50%, #fff 50%, #fff 100%);">
+            <div id="evaluationIndicator" style="position: absolute; top: -2px; left: 50%; transform: translateX(-50%); width: 4px; height: 24px; background: #ff0000; border-radius: 2px;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; width: 300px; margin: 5px auto; font-size: 12px;">
+            <span style="color: #000;">Black</span>
+            <span style="color: #666;">+5</span>
+            <span style="color: #666;">Even</span>
+            <span style="color: #666;">+5</span>
+            <span style="color: #000;">White</span>
+        </div>
+    </div>
     <div class="controls">
         <label for="difficulty">Select Difficulty:</label>
         <select id="difficulty">

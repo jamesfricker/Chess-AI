@@ -114,6 +114,10 @@ function undoMove() {
                 updateMoveIndicator();
             }
         }
+        
+        // Update evaluation after undo
+        const evaluation = evaluateBoard(game.board(), 'w');
+        updateEvaluationDisplay(evaluation);
     } catch (error) {
         console.error('Error during undo:', error);
         alert('Unable to undo move. Please try again.');
@@ -156,6 +160,8 @@ function removeHighlights() {
 // Add this with the other DOM elements at the top of the file
 const moveIndicator = document.getElementById('moveIndicator');
 const aiCounter = document.getElementById('aiCounter');
+const evaluationText = document.getElementById('evaluationText');
+const evaluationIndicator = document.getElementById('evaluationIndicator');
 
 // Add this function to update the move indicator
 function updateMoveIndicator() {
@@ -163,6 +169,56 @@ function updateMoveIndicator() {
     moveIndicator.textContent = `${currentPlayer}'s turn`;
     moveIndicator.className = `move-indicator ${game.turn()}-turn`;
     moveIndicator.setAttribute('aria-label', `It's ${currentPlayer}'s turn`);
+}
+
+// Update evaluation display
+function updateEvaluationDisplay(evaluation) {
+    // Convert evaluation to be from white's perspective
+    // Positive = white advantage, Negative = black advantage
+    const whiteEval = evaluation;
+    
+    let displayText;
+    let position; // 0-100, where 50 is even, 0 is black winning, 100 is white winning
+    
+    if (Math.abs(whiteEval) < 50) {
+        // Close game
+        if (whiteEval > 20) {
+            displayText = `White +${(whiteEval/100).toFixed(1)}`;
+        } else if (whiteEval < -20) {
+            displayText = `Black +${Math.abs(whiteEval/100).toFixed(1)}`;
+        } else {
+            displayText = "Even";
+        }
+    } else {
+        // Significant advantage
+        if (whiteEval > 500) {
+            displayText = "White Winning";
+        } else if (whiteEval < -500) {
+            displayText = "Black Winning";
+        } else if (whiteEval > 0) {
+            displayText = `White +${(whiteEval/100).toFixed(1)}`;
+        } else {
+            displayText = `Black +${Math.abs(whiteEval/100).toFixed(1)}`;
+        }
+    }
+    
+    // Calculate position on bar (clamp between 0-100)
+    position = Math.max(0, Math.min(100, 50 + (whiteEval / 20)));
+    
+    // Update text
+    evaluationText.textContent = `Evaluation: ${displayText}`;
+    
+    // Update indicator position
+    evaluationIndicator.style.left = `${position}%`;
+    
+    // Update indicator color based on advantage
+    if (Math.abs(whiteEval) < 50) {
+        evaluationIndicator.style.background = '#666'; // Gray for even
+    } else if (whiteEval > 0) {
+        evaluationIndicator.style.background = '#fff'; // White advantage
+    } else {
+        evaluationIndicator.style.background = '#000'; // Black advantage
+    }
 }
 
 // Initialize the game and show mode selection
@@ -176,6 +232,7 @@ function initGame() {
         updateMoveIndicator();
         resetPositionsCounter();
         aiCounter.textContent = "Positions evaluated: 0";
+        updateEvaluationDisplay(0); // Initialize with even evaluation
         computerPlayButton.textContent = "Select Mode";
         console.log("Game initialized - showing mode selection");
         showGameModeSelection();
@@ -198,6 +255,7 @@ function resetGame() {
         updateMoveIndicator();
         resetPositionsCounter();
         aiCounter.textContent = "Positions evaluated: 0";
+        updateEvaluationDisplay(0); // Reset to even evaluation
         showGameModeSelection();
     } catch (error) {
         console.error('Error resetting game:', error);
@@ -226,6 +284,10 @@ function onDrop(source, target) {
 
         updateMoveIndicator();
         console.log(`Player moved ${move.from}-${move.to}, gameMode: ${gameMode}, current turn: ${game.turn()}`);
+
+        // Update evaluation after player's move
+        const evaluation = evaluateBoard(game.board(), 'w');
+        updateEvaluationDisplay(evaluation);
 
         // Check for game over after player's move
         if (checkGameOver()) {
@@ -292,6 +354,10 @@ function makeComputerMove() {
             
             board.position(game.fen());
             updateMoveIndicator();
+
+            // Update evaluation after computer's move
+            const evaluation = evaluateBoard(game.board(), 'w');
+            updateEvaluationDisplay(evaluation);
 
             var end = new Date().getTime();
             var positionsCount = getPositionsEvaluated();
