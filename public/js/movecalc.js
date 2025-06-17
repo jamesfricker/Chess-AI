@@ -1,6 +1,30 @@
 // Transposition table
 const transpositionTable = new Map();
 
+// Zobrist hashing for efficient transposition table keys
+const zobristKeys = Array(12).fill().map(() => Array(64).fill().map(() => Math.floor(Math.random() * 2**32)));
+const pieceMap = { 'p': 0, 'n': 2, 'b': 4, 'r': 6, 'q': 8, 'k': 10 }; // 0-5 white, 6-11 black
+
+/**
+ * Computes Zobrist hash for a board position
+ * @param {Array} board - The chess board
+ * @return {Number} Zobrist hash of the position
+ */
+function computeZobristHash(board) {
+    let hash = 0;
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            const piece = board[i][j];
+            if (piece && piece.type && piece.color) {
+                const pieceIndex = pieceMap[piece.type] + (piece.color === 'b' ? 1 : 0);
+                const squareIndex = (7 - i) * 8 + j;
+                hash ^= zobristKeys[pieceIndex][squareIndex];
+            }
+        }
+    }
+    return hash;
+}
+
 // Move counter for AI analysis
 let positionsEvaluated = 0;
 
@@ -637,8 +661,8 @@ function calcBestMove(depth, game, playerColor, alpha = -INFINITY, beta = INFINI
     try {
         positionsEvaluated++;
 
-        const fen = game.fen();
-        const ttEntry = transpositionTable.get(fen);
+        const hash = computeZobristHash(game.board());
+        const ttEntry = transpositionTable.get(hash);
         if (ttEntry && ttEntry.depth >= depth) {
             return [ttEntry.value, ttEntry.bestMove];
         }
@@ -778,7 +802,11 @@ function calcBestMove(depth, game, playerColor, alpha = -INFINITY, beta = INFINI
             }
         }
 
-        transpositionTable.set(fen, { depth, value: bestMoveValue, bestMove });
+        // Store in transposition table with depth-preferred replacement
+        const existingEntry = transpositionTable.get(hash);
+        if (!existingEntry || depth >= existingEntry.depth) {
+            transpositionTable.set(hash, { depth, value: bestMoveValue, bestMove });
+        }
 
         return [bestMoveValue, bestMove || possibleMoves[0]];
     } catch (error) {
@@ -831,19 +859,33 @@ function Quiesce(alpha, beta, depth, game, playerColor, isMaximizing) {
         return 0;
     }
 
-    const evaluation = evaluateBoard(game.board(), playerColor);
+    // Stand-pat evaluation
+    const standPat = evaluateBoard(game.board(), playerColor);
     if (depth >= MAX_QUIESCENCE_DEPTH) {
-        return evaluation;
+        return standPat;
+    }
+
+    // Stand-pat cutoffs
+    if (isMaximizing) {
+        if (standPat >= beta) return beta;
+        alpha = Math.max(alpha, standPat);
+    } else {
+        if (standPat <= alpha) return alpha;
+        beta = Math.min(beta, standPat);
     }
 
     const tacticalMoves = getTacticalMoves(game);
+    const delta = pieceValue.q; // Largest material swing (queen value)
 
     if (isMaximizing) {
-        let maxEval = evaluation;
-        if (maxEval >= beta) return beta;
-        alpha = Math.max(alpha, maxEval);
+        let maxEval = standPat;
 
         for (const move of tacticalMoves) {
+            // Delta pruning: skip moves that cannot improve position significantly
+            if (move.captured && standPat + pieceValue[move.captured] + delta < alpha) {
+                continue;
+            }
+
             game.move(move);
             const score = Quiesce(alpha, beta, depth + 1, game, playerColor, false);
             game.undo();
@@ -854,11 +896,14 @@ function Quiesce(alpha, beta, depth, game, playerColor, isMaximizing) {
         }
         return alpha;
     } else {
-        let minEval = evaluation;
-        if (minEval <= alpha) return alpha;
-        beta = Math.min(beta, minEval);
+        let minEval = standPat;
 
         for (const move of tacticalMoves) {
+            // Delta pruning: skip moves that cannot improve position significantly
+            if (move.captured && standPat - pieceValue[move.captured] - delta > beta) {
+                continue;
+            }
+
             game.move(move);
             const score = Quiesce(alpha, beta, depth + 1, game, playerColor, true);
             game.undo();
